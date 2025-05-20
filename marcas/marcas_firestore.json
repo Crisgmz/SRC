@@ -1,0 +1,538 @@
+[
+  {
+    "marca": "Toyota",
+    "modelos": [
+      "Corolla",
+      "Camry",
+      "Yaris",
+      "Prius",
+      "RAV4",
+      "Highlander",
+      "Land Cruiser",
+      "Hilux",
+      "Tacoma",
+      "Tundra",
+      "4Runner",
+      "Sienna"
+    ]
+  },
+  {
+    "marca": "Honda",
+    "modelos": [
+      "Civic",
+      "Accord",
+      "Fit",
+      "HR-V",
+      "CR-V",
+      "Passport",
+      "Pilot",
+      "Ridgeline",
+      "Odyssey"
+    ]
+  },
+  {
+    "marca": "Ford",
+    "modelos": [
+      "Fiesta",
+      "Focus",
+      "Fusion",
+      "Mustang",
+      "Escape",
+      "Edge",
+      "Explorer",
+      "Expedition",
+      "Ranger",
+      "F-150"
+    ]
+  },
+  {
+    "marca": "Chevrolet",
+    "modelos": [
+      "Spark",
+      "Aveo",
+      "Onix",
+      "Cruze",
+      "Malibu",
+      "Trax",
+      "Equinox",
+      "Blazer",
+      "Traverse",
+      "Tahoe",
+      "Suburban",
+      "Silverado"
+    ]
+  },
+  {
+    "marca": "Nissan",
+    "modelos": [
+      "Versa",
+      "Sentra",
+      "Altima",
+      "Maxima",
+      "Kicks",
+      "Qashqai",
+      "Rogue",
+      "Murano",
+      "Pathfinder",
+      "Frontier",
+      "Titan"
+    ]
+  },
+  {
+    "marca": "Hyundai",
+    "modelos": [
+      "Accent",
+      "Elantra",
+      "Sonata",
+      "Ioniq",
+      "Kona",
+      "Tucson",
+      "Santa Fe",
+      "Palisade"
+    ]
+  },
+  {
+    "marca": "Kia",
+    "modelos": [
+      "Rio",
+      "Forte",
+      "Optima",
+      "Stinger",
+      "Soul",
+      "Seltos",
+      "Sportage",
+      "Sorento",
+      "Telluride"
+    ]
+  },
+  {
+    "marca": "Volkswagen",
+    "modelos": [
+      "Polo",
+      "Golf",
+      "Jetta",
+      "Passat",
+      "Tiguan",
+      "Touareg",
+      "Atlas"
+    ]
+  },
+  {
+    "marca": "Mazda",
+    "modelos": [
+      "Mazda2",
+      "Mazda3",
+      "Mazda6",
+      "CX-3",
+      "CX-30",
+      "CX-5",
+      "CX-9",
+      "MX-5 Miata"
+    ]
+  },
+  {
+    "marca": "BMW",
+    "modelos": [
+      "Serie 1",
+      "Serie 2",
+      "Serie 3",
+      "Serie 4",
+      "Serie 5",
+      "Serie 7",
+      "X1",
+      "X3",
+      "X5",
+      "X7",
+      "Z4"
+    ]
+  },
+  {
+    "marca": "Mercedes-Benz",
+    "modelos": [
+      "Clase A",
+      "Clase C",
+      "Clase E",
+      "Clase S",
+      "CLA",
+      "CLS",
+      "GLA",
+      "GLC",
+      "GLE",
+      "GLS",
+      "Clase G"
+    ]
+  },
+  {
+    "marca": "Audi",
+    "modelos": [
+      "A1",
+      "A3",
+      "A4",
+      "A5",
+      "A6",
+      "A7",
+      "A8",
+      "Q2",
+      "Q3",
+      "Q5",
+      "Q7",
+      "Q8",
+      "e-tron"
+    ]
+  },
+  {
+    "marca": "Jeep",
+    "modelos": [
+      "Renegade",
+      "Compass",
+      "Cherokee",
+      "Grand Cherokee",
+      "Wrangler",
+      "Gladiator"
+    ]
+  },
+  {
+    "marca": "Subaru",
+    "modelos": [
+      "Impreza",
+      "Legacy",
+      "WRX",
+      "BRZ",
+      "Crosstrek",
+      "Forester",
+      "Outback",
+      "Ascent"
+    ]
+  },
+  {
+    "marca": "Mitsubishi",
+    "modelos": [
+      "Mirage",
+      "Lancer",
+      "Outlander",
+      "Eclipse Cross",
+      "Montero Sport"
+    ]
+  },
+  {
+    "marca": "Peugeot",
+    "modelos": [
+      "208",
+      "2008",
+      "301",
+      "308",
+      "3008",
+      "5008"
+    ]
+  },
+  {
+    "marca": "Renault",
+    "modelos": [
+      "Kwid",
+      "Logan",
+      "Sandero",
+      "Duster",
+      "Captur",
+      "Koleos"
+    ]
+  },
+  {
+    "marca": "Fiat",
+    "modelos": [
+      "Mobi",
+      "Uno",
+      "Argo",
+      "Cronos",
+      "500",
+      "Toro"
+    ]
+  },
+  {
+    "marca": "Suzuki",
+    "modelos": [
+      "Celerio",
+      "Swift",
+      "Baleno",
+      "Vitara",
+      "S-Cross",
+      "Jimny"
+    ]
+  },
+  {
+    "marca": "Volvo",
+    "modelos": [
+      "S60",
+      "S90",
+      "V60",
+      "V90",
+      "XC40",
+      "XC60",
+      "XC90"
+    ]
+  },
+  {
+    "marca": "Tesla",
+    "modelos": [
+      "Model 3",
+      "Model S",
+      "Model X",
+      "Model Y"
+    ]
+  },
+  {
+    "marca": "Land Rover",
+    "modelos": [
+      "Range Rover Evoque",
+      "Velar",
+      "Sport",
+      "Discovery",
+      "Defender"
+    ]
+  },
+  {
+    "marca": "SEAT",
+    "modelos": [
+      "Ibiza",
+      "Arona",
+      "León",
+      "Ateca",
+      "Tarraco"
+    ]
+  },
+  {
+    "marca": "Cupra",
+    "modelos": [
+      "Ateca",
+      "León",
+      "Formentor",
+      "Born",
+      "Tavascan",
+      "Terramar"
+    ]
+  },
+  {
+    "marca": "Opel",
+    "modelos": [
+      "Corsa",
+      "Astra",
+      "Crossland",
+      "Grandland",
+      "Mokka",
+      "Zafira Life"
+    ]
+  },
+  {
+    "marca": "Citroën",
+    "modelos": [
+      "C3",
+      "C4",
+      "C5 Aircross",
+      "Berlingo"
+    ]
+  },
+  {
+    "marca": "Skoda",
+    "modelos": [
+      "Fabia",
+      "Scala",
+      "Octavia",
+      "Superb",
+      "Kamiq",
+      "Karoq",
+      "Kodiaq"
+    ]
+  },
+  {
+    "marca": "Chery",
+    "modelos": [
+      "Tiggo 2",
+      "Tiggo 3",
+      "Tiggo 5",
+      "Tiggo 7",
+      "Tiggo 8",
+      "Arrizo 5"
+    ]
+  },
+  {
+    "marca": "BYD",
+    "modelos": [
+      "Dolphin",
+      "Atto 3",
+      "Han",
+      "Tang",
+      "Seal"
+    ]
+  },
+  {
+    "marca": "MG",
+    "modelos": [
+      "MG3",
+      "MG5",
+      "MG6",
+      "ZS",
+      "HS",
+      "Marvel R"
+    ]
+  },
+  {
+    "marca": "Geely",
+    "modelos": [
+      "Coolray",
+      "Azkarra",
+      "Emgrand"
+    ]
+  },
+  {
+    "marca": "Great Wall",
+    "modelos": [
+      "Haval H2",
+      "H6",
+      "Jolion",
+      "Poer"
+    ]
+  },
+  {
+    "marca": "Dongfeng",
+    "modelos": [
+      "AX4",
+      "AX7",
+      "Joyear X5"
+    ]
+  },
+  {
+    "marca": "DFSK",
+    "modelos": [
+      "Glory 580",
+      "Glory iX5",
+      "C31",
+      "C35"
+    ]
+  },
+  {
+    "marca": "JAC",
+    "modelos": [
+      "J2",
+      "J4",
+      "S2",
+      "S3",
+      "S5",
+      "T6"
+    ]
+  },
+  {
+    "marca": "BAIC",
+    "modelos": [
+      "D20",
+      "X25",
+      "BJ20",
+      "BJ40"
+    ]
+  },
+  {
+    "marca": "Zotye",
+    "modelos": [
+      "T300",
+      "T500",
+      "Z100"
+    ]
+  },
+  {
+    "marca": "FAW",
+    "modelos": [
+      "Besturn X40",
+      "Besturn X80"
+    ]
+  },
+  {
+    "marca": "Lifan",
+    "modelos": [
+      "X50",
+      "X60",
+      "530"
+    ]
+  },
+  {
+    "marca": "Changan",
+    "modelos": [
+      "CS15",
+      "CS35 Plus",
+      "CS55",
+      "CS75",
+      "Eado"
+    ]
+  },
+  {
+    "marca": "Haima",
+    "modelos": [
+      "S5",
+      "S7",
+      "M3"
+    ]
+  },
+  {
+    "marca": "Proton",
+    "modelos": [
+      "Saga",
+      "Persona",
+      "Iriz",
+      "X70",
+      "X50"
+    ]
+  },
+  {
+    "marca": "Perodua",
+    "modelos": [
+      "Axia",
+      "Bezza",
+      "Myvi",
+      "Aruz"
+    ]
+  },
+  {
+    "marca": "Tata",
+    "modelos": [
+      "Tiago",
+      "Tigor",
+      "Altroz",
+      "Nexon",
+      "Harrier",
+      "Safari"
+    ]
+  },
+  {
+    "marca": "Mahindra",
+    "modelos": [
+      "KUV100",
+      "XUV300",
+      "XUV500",
+      "Scorpio",
+      "Bolero",
+      "Thar"
+    ]
+  },
+  {
+    "marca": "Isuzu",
+    "modelos": [
+      "D-Max",
+      "MU-X"
+    ]
+  },
+  {
+    "marca": "Ram",
+    "modelos": [
+      "1500",
+      "2500",
+      "3500",
+      "ProMaster"
+    ]
+  },
+  {
+    "marca": "Dodge",
+    "modelos": [
+      "Charger",
+      "Challenger",
+      "Durango",
+      "Journey"
+    ]
+  }
+]

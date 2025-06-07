@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -48,17 +49,20 @@ class _SeleccionFechaHoraScreenState extends State<SeleccionFechaHoraScreen> {
   // Current month and year for calendar
   int _currentMonth = DateTime.now().month;
   int _currentYear = DateTime.now().year;
-  int _selectedMonthIndex = 0; // 0 for current month
+  final int _selectedMonthIndex = 0; // 0 for current month
 
   // Selected days
   int? _startDay;
   int? _endDay;
+
+  List<Map<String, DateTime>> _fechasReservadas = [];
 
   @override
   void initState() {
     super.initState();
     // Initialize date formatting for Spanish locale
     initializeDateFormatting('es_ES', null);
+    _cargarFechasReservadas();
 
     _startDay = DateTime.now().day;
     _endDay = DateTime.now().add(const Duration(days: 7)).day;
@@ -80,14 +84,34 @@ class _SeleccionFechaHoraScreenState extends State<SeleccionFechaHoraScreen> {
     );
   }
 
+  Future<void> _cargarFechasReservadas() async {
+    final snapshot =
+        await FirebaseFirestore.instance
+            .collection('rentas')
+            .where('vehiculoId', isEqualTo: widget.idVehiculo)
+            .where('estado', whereIn: ['Pre-agendada', 'confirmada'])
+            .get();
+
+    final reservas =
+        snapshot.docs.map((doc) {
+          final inicio = (doc['fechaInicio'] as Timestamp).toDate();
+          final fin = (doc['fechaFin'] as Timestamp).toDate();
+          return {'inicio': inicio, 'fin': fin};
+        }).toList();
+
+    setState(() {
+      _fechasReservadas = reservas;
+    });
+  }
+
   void _selectDay(int day) {
     setState(() {
       if (_startDay == null || (_startDay != null && _endDay != null)) {
-        // Start new selection
+        // Comenzar nueva selección
         _startDay = day;
         _endDay = null;
       } else {
-        // Complete the selection
+        // Completar la selección
         if (day < _startDay!) {
           _endDay = _startDay;
           _startDay = day;
@@ -96,7 +120,7 @@ class _SeleccionFechaHoraScreenState extends State<SeleccionFechaHoraScreen> {
         }
       }
 
-      // Update datetime objects
+      // Actualizar objetos DateTime
       if (_startDay != null) {
         startDate = DateTime(
           _currentYear,
@@ -115,6 +139,46 @@ class _SeleccionFechaHoraScreenState extends State<SeleccionFechaHoraScreen> {
           endTime.hour,
           endTime.minute,
         );
+      }
+
+      // Validar si hay días rentados dentro del rango seleccionado
+      if (_startDay != null && _endDay != null) {
+        final DateTime nuevaFechaInicio = DateTime(
+          _currentYear,
+          _currentMonth,
+          _startDay!,
+          startTime.hour,
+          startTime.minute,
+        );
+
+        final DateTime nuevaFechaFin = DateTime(
+          _currentYear,
+          _currentMonth,
+          _endDay!,
+          endTime.hour,
+          endTime.minute,
+        );
+
+        if (_rangoTieneConflicto(nuevaFechaInicio, nuevaFechaFin)) {
+          // Resetear selección y mostrar mensaje
+          _startDay = null;
+          _endDay = null;
+          startDate = DateTime.now();
+          endDate = DateTime.now().add(const Duration(days: 7));
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                'No puedes seleccionar un rango que contenga días ocupados.',
+              ),
+              backgroundColor: Colors.red[600],
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+        }
       }
     });
   }
@@ -196,6 +260,28 @@ class _SeleccionFechaHoraScreenState extends State<SeleccionFechaHoraScreen> {
     return day > _startDay! && day < _endDay!;
   }
 
+  bool _esDiaReservado(DateTime dia) {
+    for (final reserva in _fechasReservadas) {
+      if (dia.isAfter(reserva['inicio']!.subtract(const Duration(days: 1))) &&
+          dia.isBefore(reserva['fin']!.add(const Duration(days: 1)))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool _rangoTieneConflicto(DateTime inicio, DateTime fin) {
+    for (final reserva in _fechasReservadas) {
+      final inicioOcupado = reserva['inicio']!;
+      final finOcupado = reserva['fin']!;
+
+      final haySolapamiento =
+          inicio.isBefore(finOcupado) && fin.isAfter(inicioOcupado);
+      if (haySolapamiento) return true;
+    }
+    return false;
+  }
+
   // Generate calendar for the current month
   List<Widget> _buildCalendar() {
     List<Widget> calendar = [];
@@ -254,6 +340,8 @@ class _SeleccionFechaHoraScreenState extends State<SeleccionFechaHoraScreen> {
 
     // Add days for current month
     for (int day = 1; day <= daysInMonth; day++) {
+      final currentDate = DateTime(_currentYear, _currentMonth, day);
+      final reservado = _esDiaReservado(currentDate);
       final isToday =
           DateTime.now().day == day &&
           DateTime.now().month == _currentMonth &&
@@ -262,17 +350,19 @@ class _SeleccionFechaHoraScreenState extends State<SeleccionFechaHoraScreen> {
       calendarDays.add(
         Expanded(
           child: GestureDetector(
-            onTap: () => _selectDay(day),
+            onTap: reservado ? null : () => _selectDay(day),
             child: Container(
               height: 40,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color:
-                    _isDaySelected(day)
+                    reservado
+                        ? Colors.grey[200]
+                        : _isDaySelected(day)
                         ? const Color(0xFFF9A825)
-                        : (_isDayInRange(day)
-                            ? const Color(0xFFFFF3E0)
-                            : Colors.transparent),
+                        : _isDayInRange(day)
+                        ? const Color(0xFFFFF3E0)
+                        : Colors.transparent,
               ),
               child: Center(
                 child: Text(
@@ -282,7 +372,12 @@ class _SeleccionFechaHoraScreenState extends State<SeleccionFechaHoraScreen> {
                         isToday || _isDaySelected(day)
                             ? FontWeight.bold
                             : FontWeight.normal,
-                    color: _isDaySelected(day) ? Colors.white : Colors.black,
+                    color:
+                        reservado
+                            ? Colors.grey
+                            : _isDaySelected(day)
+                            ? Colors.white
+                            : Colors.black,
                   ),
                 ),
               ),

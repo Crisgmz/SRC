@@ -5,7 +5,6 @@ import 'package:shimmer/shimmer.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:solutions_rent_car/src/screens/rentas/SeleccionFechaHoraScreen.dart';
-import 'package:solutions_rent_car/src/vehiculos/Proveedor/EditarVehiculoScreen.dart';
 
 class ClienteDetalleVehiculoScreen extends StatefulWidget {
   final String idVehiculo;
@@ -135,19 +134,20 @@ class _ClienteDetalleVehiculoScreenState
       body:
           vehiculoNoEncontrado
               ? const Center(child: Text('Vehículo no encontrado'))
-              : vehiculoData == null
-              ? const DetalleVehiculoShimmer()
-              : AnimatedBuilder(
-                animation: _controller,
-                builder: (context, child) {
-                  return FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: SlideTransition(
-                      position: _slideAnimation,
-                      child: _buildContent(vehiculoData!),
-                    ),
-                  );
+              : AnimatedSwitcher(
+                duration: const Duration(milliseconds: 500),
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(opacity: animation, child: child);
                 },
+                layoutBuilder:
+                    (currentChild, previousChildren) => currentChild!,
+                child:
+                    vehiculoData == null
+                        ? const KeyedSubtree(
+                          key: ValueKey('shimmer'),
+                          child: DetalleVehiculoShimmer(),
+                        )
+                        : _buildContent(vehiculoData!),
               ),
       bottomNavigationBar:
           vehiculoData == null || vehiculoNoEncontrado
@@ -231,167 +231,180 @@ class _ClienteDetalleVehiculoScreenState
   Widget _buildContent(Map<String, dynamic> data) {
     final List<dynamic> imagenes = data['imagenes'] ?? [];
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Carrusel reemplazado con PageView
-          SizedBox(
-            height: 230,
-            child: Stack(
-              children: [
-                PageView.builder(
-                  controller: _pageController,
-                  itemCount: imagenes.length,
-                  onPageChanged: (index) {
-                    setState(() => _currentImageIndex = index);
-                  },
-                  itemBuilder: (context, index) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                      child: GestureDetector(
-                        onTap: () => _openFullGallery(imagenes, index),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: Image.network(
-                            imagenes[index],
-                            fit: BoxFit.cover,
-                            width: double.infinity,
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Aquí va todo el contenido actual de _buildContent
+              SizedBox(
+                height: 230,
+                child: Stack(
+                  children: [
+                    PageView.builder(
+                      controller: _pageController,
+                      itemCount: imagenes.length,
+                      onPageChanged: (index) {
+                        setState(() => _currentImageIndex = index);
+                      },
+                      itemBuilder: (context, index) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                          child: GestureDetector(
+                            onTap: () => _openFullGallery(imagenes, index),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: Image.network(
+                                imagenes[index],
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                Positioned(
-                  bottom: 12,
-                  right: 20,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '${_currentImageIndex + 1} / ${imagenes.length}',
-                      style: const TextStyle(color: Colors.white, fontSize: 12),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Miniaturas de imágenes
-          if (imagenes.length > 1)
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: SizedBox(
-                height: 70,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: imagenes.length,
-                  itemBuilder: (context, index) {
-                    return GestureDetector(
-                      onTap: () {
-                        // Ahora usamos PageController.animateToPage que sí funciona correctamente
-                        _pageController.animateToPage(
-                          index,
-                          duration: const Duration(milliseconds: 800),
-                          curve: Curves.easeInOut,
                         );
                       },
+                    ),
+                    Positioned(
+                      bottom: 12,
+                      right: 20,
                       child: Container(
-                        width: 80,
-                        margin: const EdgeInsets.only(right: 8),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color:
-                                _currentImageIndex == index
-                                    ? const Color(0xFFF9A825)
-                                    : Colors.transparent,
-                            width: 2,
-                          ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
                         ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: Image.network(
-                            imagenes[index],
-                            fit: BoxFit.cover,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.6),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${_currentImageIndex + 1} / ${imagenes.length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
                           ),
                         ),
                       ),
-                    );
-                  },
-                ),
-              ),
-            ),
-
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(data['marca'] ?? '', style: const TextStyle(fontSize: 16)),
-                Text(
-                  '${data['nombre']} ${data['anio']}',
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '\$${data['precioPorDia']}/día',
-                  style: const TextStyle(
-                    color: Colors.orange,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    _buildInfoTile(
-                      Icons.settings,
-                      'Transmisión',
-                      data['transmision'] ?? 'N/A',
-                    ),
-                    _buildInfoTile(
-                      Icons.people,
-                      'Pasajeros',
-                      '${data['pasajeros'] ?? 0} adultos',
-                    ),
-                    _buildInfoTile(
-                      Icons.directions_car,
-                      'Tipo',
-                      data['tipo'] ?? 'N/A',
-                    ),
-                    _buildInfoTile(
-                      Icons.local_gas_station,
-                      'Combustible',
-                      data['combustible'] ?? 'N/A',
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Descripción',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+
+              if (imagenes.length > 1)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: SizedBox(
+                    height: 70,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: imagenes.length,
+                      itemBuilder: (context, index) {
+                        return GestureDetector(
+                          onTap: () {
+                            _pageController.animateToPage(
+                              index,
+                              duration: const Duration(milliseconds: 800),
+                              curve: Curves.easeInOut,
+                            );
+                          },
+                          child: Container(
+                            width: 80,
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color:
+                                    _currentImageIndex == index
+                                        ? const Color(0xFFF9A825)
+                                        : Colors.transparent,
+                                width: 2,
+                              ),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: Image.network(
+                                imagenes[index],
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 8),
-                Text(data['descripcion'] ?? ''),
-                const SizedBox(height: 16),
-              ],
-            ),
+
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      data['marca'] ?? '',
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    Text(
+                      '${data['nombre']} ${data['anio']}',
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '\$${data['precioPorDia']}/día',
+                      style: const TextStyle(
+                        color: Colors.orange,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        _buildInfoTile(
+                          Icons.settings,
+                          'Transmisión',
+                          data['transmision'] ?? 'N/A',
+                        ),
+                        _buildInfoTile(
+                          Icons.people,
+                          'Pasajeros',
+                          '${data['pasajeros'] ?? 0} adultos',
+                        ),
+                        _buildInfoTile(
+                          Icons.directions_car,
+                          'Tipo',
+                          data['tipo'] ?? 'N/A',
+                        ),
+                        _buildInfoTile(
+                          Icons.local_gas_station,
+                          'Combustible',
+                          data['combustible'] ?? 'N/A',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Descripción',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(data['descripcion'] ?? ''),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

@@ -22,17 +22,44 @@ class DatosRecogidaScreen extends StatefulWidget {
 }
 
 class _DatosRecogidaScreenState extends State<DatosRecogidaScreen> {
-  int? selectedDeliveryOption;
-  int? selectedPickupOption;
+  String? selectedDeliveryKey;
+  String? selectedPickupKey;
 
-  final List<String> opcionesEntrega = [
-    'Recogida en el lugar del coche',
-    'Aeropuerto Internacional de Cibao',
-    'Aeropuerto Internacional Las Americas',
-    'Entrega a Domicilio',
-  ];
+  final Map<String, Map<String, String>> opcionesEntrega = {
+    'entrega_local': {
+      'title': 'Recogida en el local',
+      'subtitle': 'Le enviaremos la ubicación exacta una vez reservado',
+      'price': 'Gratis',
+    },
+    'aeropuerto_cibao': {
+      'title': 'Aeropuerto Internacional de Cibao',
+      'subtitle': 'Airport',
+      'price': 'Gratis',
+    },
+    'aeropuerto_americas': {
+      'title': 'Aeropuerto Internacional Las Americas',
+      'subtitle': 'Airport',
+      'price': '\$100',
+    },
+  };
 
-  final List<String> opcionesRecogida = ['Introduzca su Lugar de recogida'];
+  final Map<String, Map<String, String>> opcionesRecogida = {
+    'recogida_local': {
+      'title': 'Entrega en el local',
+      'subtitle': '',
+      'price': '\$120',
+    },
+    'recogida_cibao': {
+      'title': 'Aeropuerto Internacional de Cibao',
+      'subtitle': 'Airport',
+      'price': 'Gratis',
+    },
+    'recogida_americas': {
+      'title': 'Aeropuerto Internacional Las Americas',
+      'subtitle': 'Airport',
+      'price': '\$100',
+    },
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -46,14 +73,11 @@ class _DatosRecogidaScreenState extends State<DatosRecogidaScreen> {
       ),
       body: Column(
         children: [
-          // Mapa
           Container(
             height: 200,
             color: Colors.grey[300],
             child: const Center(child: Text('Mapa aquí')),
           ),
-
-          // Contenido scrollable
           Expanded(
             child: Container(
               color: Colors.white,
@@ -70,38 +94,15 @@ class _DatosRecogidaScreenState extends State<DatosRecogidaScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-
-                    // Opciones de entrega
-                    _buildOptionCard(
-                      index: 0,
-                      isDelivery: true,
-                      title: 'Recogida en el lugar del coche',
-                      subtitle:
-                          'Le enviaremos la ubicación exacta una vez reservado',
-                      price: 'Free',
+                    ...opcionesEntrega.entries.map(
+                      (entry) => _buildOptionCard(
+                        keyValue: entry.key,
+                        isDelivery: true,
+                        title: entry.value['title']!,
+                        subtitle: entry.value['subtitle']!,
+                        price: entry.value['price']!,
+                      ),
                     ),
-                    _buildOptionCard(
-                      index: 1,
-                      isDelivery: true,
-                      title: 'Aeropuerto Internacional de Cibao',
-                      subtitle: 'Airport',
-                      price: '\$120',
-                    ),
-                    _buildOptionCard(
-                      index: 2,
-                      isDelivery: true,
-                      title: 'Aeropuerto Internacional Las Americas',
-                      subtitle: 'Airport',
-                      price: '\$120',
-                    ),
-                    _buildOptionCard(
-                      index: 3,
-                      isDelivery: true,
-                      title: 'Entrega a Domicilio',
-                      subtitle: 'Casa del cliente',
-                      price: '\$120',
-                    ),
-
                     const SizedBox(height: 20),
                     const Text(
                       'Lugares de recogida',
@@ -111,26 +112,21 @@ class _DatosRecogidaScreenState extends State<DatosRecogidaScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-
-                    // Opciones de recogida
-                    _buildOptionCard(
-                      index: 0,
-                      isDelivery: false,
-                      title: 'Introduzca su Lugar de recogida',
-                      subtitle: '',
-                      price: '\$120',
+                    ...opcionesRecogida.entries.map(
+                      (entry) => _buildOptionCard(
+                        keyValue: entry.key,
+                        isDelivery: false,
+                        title: entry.value['title']!,
+                        subtitle: entry.value['subtitle']!,
+                        price: entry.value['price']!,
+                      ),
                     ),
-
-                    const SizedBox(
-                      height: 80,
-                    ), // Espacio para evitar que el contenido tape el botón
+                    const SizedBox(height: 80),
                   ],
                 ),
               ),
             ),
           ),
-
-          // Botón fijo en la parte inferior
           Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -140,12 +136,12 @@ class _DatosRecogidaScreenState extends State<DatosRecogidaScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    if (selectedDeliveryOption != null &&
-                        selectedPickupOption != null) {
+                    if (selectedDeliveryKey != null &&
+                        selectedPickupKey != null) {
                       final lugarEntrega =
-                          opcionesEntrega[selectedDeliveryOption!];
+                          opcionesEntrega[selectedDeliveryKey!]!['title']!;
                       final lugarRecogida =
-                          opcionesRecogida[selectedPickupOption!];
+                          opcionesRecogida[selectedPickupKey!]!['title']!;
 
                       Navigator.push(
                         context,
@@ -155,8 +151,8 @@ class _DatosRecogidaScreenState extends State<DatosRecogidaScreen> {
                                 vehiculoData: widget.vehiculoData,
                                 startDateTime: widget.startDateTime,
                                 endDateTime: widget.endDateTime,
-                                deliveryOption: selectedDeliveryOption!,
-                                pickupOption: selectedPickupOption!,
+                                deliveryOption: selectedDeliveryKey!,
+                                pickupOption: selectedPickupKey!,
                                 nombreCliente: widget.nombreCliente,
                                 telefono: widget.telefono,
                                 lugarEntrega: lugarEntrega,
@@ -196,16 +192,20 @@ class _DatosRecogidaScreenState extends State<DatosRecogidaScreen> {
   }
 
   Widget _buildOptionCard({
-    required int index,
+    required String keyValue,
     required bool isDelivery,
     required String title,
     required String subtitle,
     required String price,
   }) {
-    final isSelected =
+    // Crear identificadores únicos para evitar conflictos entre grupos
+    final uniqueValue = isDelivery ? 'delivery_$keyValue' : 'pickup_$keyValue';
+    final currentGroupValue =
         isDelivery
-            ? selectedDeliveryOption == index
-            : selectedPickupOption == index;
+            ? (selectedDeliveryKey != null
+                ? 'delivery_$selectedDeliveryKey'
+                : null)
+            : (selectedPickupKey != null ? 'pickup_$selectedPickupKey' : null);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -218,9 +218,9 @@ class _DatosRecogidaScreenState extends State<DatosRecogidaScreen> {
         onTap: () {
           setState(() {
             if (isDelivery) {
-              selectedDeliveryOption = index;
+              selectedDeliveryKey = keyValue;
             } else {
-              selectedPickupOption = index;
+              selectedPickupKey = keyValue;
             }
           });
         },
@@ -228,16 +228,15 @@ class _DatosRecogidaScreenState extends State<DatosRecogidaScreen> {
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
           child: Row(
             children: [
-              Radio(
-                value: index,
-                groupValue:
-                    isDelivery ? selectedDeliveryOption : selectedPickupOption,
+              Radio<String>(
+                value: uniqueValue,
+                groupValue: currentGroupValue,
                 onChanged: (value) {
                   setState(() {
                     if (isDelivery) {
-                      selectedDeliveryOption = value as int;
+                      selectedDeliveryKey = keyValue;
                     } else {
-                      selectedPickupOption = value as int;
+                      selectedPickupKey = keyValue;
                     }
                   });
                 },

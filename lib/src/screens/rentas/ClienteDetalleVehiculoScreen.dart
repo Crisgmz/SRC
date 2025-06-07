@@ -77,7 +77,7 @@ class _ClienteDetalleVehiculoScreenState
     if (user != null) {
       final doc =
           await FirebaseFirestore.instance
-              .collection('users')
+              .collection('usuarios')
               .doc(user.uid)
               .get();
 
@@ -85,7 +85,7 @@ class _ClienteDetalleVehiculoScreenState
         final data = doc.data()!;
         setState(() {
           nombreCliente = data['name'] ?? '';
-          telefono = data['telefono'] ?? '';
+          telefono = data['phone'] ?? '';
         });
       }
     }

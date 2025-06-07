@@ -21,7 +21,7 @@ class _SellerHomeScreenState extends State<SellerHomeScreen> {
   Widget build(BuildContext context) {
     final String userId = FirebaseAuth.instance.currentUser!.uid;
 
-    final List<Widget> _screens = [
+    final List<Widget> screens = [
       const Center(child: Text('Bienvenido, Vendedor')),
       const Center(child: Text('Rentas')),
       const MisVehiculosScreen(),
@@ -31,10 +31,10 @@ class _SellerHomeScreenState extends State<SellerHomeScreen> {
     return Theme(
       data: Theme.of(context).copyWith(
         navigationBarTheme: NavigationBarThemeData(
-          labelTextStyle: MaterialStateProperty.resolveWith<TextStyle?>((
+          labelTextStyle: WidgetStateProperty.resolveWith<TextStyle?>((
             states,
           ) {
-            final isSelected = states.contains(MaterialState.selected);
+            final isSelected = states.contains(WidgetState.selected);
             return TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
@@ -81,7 +81,7 @@ class _SellerHomeScreenState extends State<SellerHomeScreen> {
               ),
             );
           },
-          child: _screens[_currentIndex],
+          child: screens[_currentIndex],
         ),
         bottomNavigationBar: NavigationBar(
           selectedIndex: _currentIndex,

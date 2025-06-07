@@ -2,8 +2,10 @@ import 'dart:io';
 
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:android_intent_plus/flag.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:solutions_rent_car/src/screens/home/ClientHomeScreen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:math';
 
@@ -11,8 +13,8 @@ class ConfirmacionReservaScreen extends StatefulWidget {
   final Map<String, dynamic> vehiculoData;
   final DateTime startDateTime;
   final DateTime endDateTime;
-  final int deliveryOption;
-  final int pickupOption;
+  final String deliveryOption;
+  final String pickupOption;
   final String nombreCliente;
   final String telefono;
   final String lugarEntrega;
@@ -61,7 +63,7 @@ class _ConfirmacionReservaScreenState extends State<ConfirmacionReservaScreen> {
       // Luego cargamos datos actualizados desde Firebase
       final String idVehiculo = widget.vehiculoData['idVehiculo'];
 
-      if (idVehiculo != null && idVehiculo.isNotEmpty) {
+      if (idVehiculo.isNotEmpty) {
         final snapshot =
             await FirebaseFirestore.instance
                 .collection('vehiculos')
@@ -516,7 +518,7 @@ class _ConfirmacionReservaScreenState extends State<ConfirmacionReservaScreen> {
               style: const TextStyle(fontSize: 16),
             ),
             Text(
-              '${precioTotal.toStringAsFixed(2)}',
+              precioTotal.toStringAsFixed(2),
               style: const TextStyle(fontSize: 16),
             ),
           ],
@@ -754,6 +756,7 @@ class _ConfirmacionReservaScreenState extends State<ConfirmacionReservaScreen> {
     try {
       // Generar un ID único para la reserva
       final String idReserva = _generarIdReserva();
+      final String clienteId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
       // Determinar la duración y el precio total
       final int dias = diasReserva;
@@ -776,10 +779,17 @@ class _ConfirmacionReservaScreenState extends State<ConfirmacionReservaScreen> {
         'precioTotal': total,
         'cliente': widget.nombreCliente,
         'telefono': widget.telefono,
+        'clienteId': clienteId,
         'fechaInicio': widget.startDateTime,
         'fechaFin': widget.endDateTime,
         'lugarEntrega': widget.lugarEntrega,
         'lugarRecogida': widget.lugarRecogida,
+        'imagen':
+            (vehiculoData!['imagenes'] != null &&
+                    vehiculoData!['imagenes'] is List &&
+                    vehiculoData!['imagenes'].isNotEmpty)
+                ? vehiculoData!['imagenes'][0]
+                : null,
         'estado': 'Pre-agendada',
         'fechaCreacion': Timestamp.now(),
       };
@@ -796,6 +806,17 @@ class _ConfirmacionReservaScreenState extends State<ConfirmacionReservaScreen> {
       if (docRef.docs.isNotEmpty) {
         await docRef.docs.first.reference.update({
           'totalReservas': FieldValue.increment(1),
+        });
+      }
+
+      if (docRef.docs.isNotEmpty) {
+        final vehiculoRef = docRef.docs.first.reference;
+
+        await vehiculoRef.update({
+          'totalReservas': FieldValue.increment(1),
+          'fechasReservadas': FieldValue.arrayUnion([
+            {'inicio': widget.startDateTime, 'fin': widget.endDateTime},
+          ]),
         });
       }
 
@@ -816,12 +837,14 @@ class _ConfirmacionReservaScreenState extends State<ConfirmacionReservaScreen> {
         '*Días:* $dias\n'
         '*Precio por día:* \$${vehiculoData!['precioPorDia']}\n'
         '*Precio total:* \$${total.toStringAsFixed(2)}\n'
-        '*Lugar de entrega:* ${widget.lugarEntrega}\n'
-        '*Lugar de recogida:* ${widget.lugarRecogida}\n',
+        '*Recogida:* ${widget.lugarEntrega}\n'
+        '*Entrega:* ${widget.lugarRecogida}\n',
       );
 
-      // Llamar a la función para abrir WhatsApp
-      await _abrirWhatsApp(mensaje, context);
+      // Procesar redirecciones con popup y navegación
+      if (context.mounted) {
+        await _procesarRedirecciones(context, mensaje);
+      }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -832,5 +855,170 @@ class _ConfirmacionReservaScreenState extends State<ConfirmacionReservaScreen> {
         );
       }
     }
+  }
+
+  Future<void> _mostrarPopupConfirmacionYRedirigir(
+    BuildContext context,
+    String mensaje,
+  ) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // No se puede cerrar tocando fuera
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green, size: 30),
+              SizedBox(width: 10),
+              Text(
+                '¡Reserva Completada!',
+                style: TextStyle(
+                  color: Colors.green,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Tu orden ha sido completada exitosamente.',
+                style: TextStyle(fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 15),
+              Text(
+                'Te redirigiremos a WhatsApp ahora para finalizar la confirmación.',
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 20),
+              // Indicador de carga
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _procesarRedirecciones(
+    BuildContext context,
+    String mensaje,
+  ) async {
+    // Mostrar el popup y obtener el completer para controlarlo
+    bool popupMostrado = false;
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        popupMostrado = true;
+
+        // Programar las acciones después de mostrar el popup
+        Future.delayed(Duration(seconds: 2), () async {
+          // Abrir WhatsApp
+          await _abrirWhatsApp(mensaje, context);
+
+          // Esperar un poco más
+          await Future.delayed(Duration(milliseconds: 500));
+
+          // Cerrar popup y redirigir
+          if (dialogContext.mounted && Navigator.canPop(dialogContext)) {
+            Navigator.of(dialogContext).pop();
+          }
+
+          // Redirigir al home
+          if (context.mounted) {
+            Navigator.of(context).pushAndRemoveUntil(
+              PageRouteBuilder(
+                pageBuilder:
+                    (context, animation, secondaryAnimation) =>
+                        const ClientHomeScreen(),
+                transitionsBuilder: (
+                  context,
+                  animation,
+                  secondaryAnimation,
+                  child,
+                ) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+                transitionDuration: Duration(milliseconds: 500),
+              ),
+              (route) => false,
+            );
+
+            // Mostrar confirmación final
+            Future.delayed(Duration(milliseconds: 800), () {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Row(
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.white),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text('Reserva completada exitosamente'),
+                        ),
+                      ],
+                    ),
+                    backgroundColor: Colors.green,
+                    duration: Duration(seconds: 3),
+                  ),
+                );
+              }
+            });
+          }
+        });
+
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green, size: 30),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  '¡Reserva Completada!',
+                  style: TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Tu orden ha sido completada exitosamente.',
+                style: TextStyle(fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 15),
+              Text(
+                'Te redirigiremos a WhatsApp ahora para finalizar la confirmación.',
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 20),
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

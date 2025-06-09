@@ -188,6 +188,7 @@ class _BusquedaScreenState extends State<BusquedaScreen> {
 
   DateTimeRange? fechasSeleccionadas;
 
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final args =
@@ -621,8 +622,9 @@ class _BusquedaScreenState extends State<BusquedaScreen> {
 
     for (final vehiculo in vehiculosSnapshot.docs) {
       final String? vehiculoId = vehiculo.get('idVehiculo');
-      if (vehiculoId == null)
+      if (vehiculoId == null) {
         continue; // seguridad por si algún documento no tiene el campo
+      }
 
       // Si no se seleccionaron fechas, se considera disponible
       if (rango == null) {
@@ -683,7 +685,7 @@ class _BusquedaScreenState extends State<BusquedaScreen> {
 
       // Verificar cada renta activa
       for (final rentaDoc in rentasSnapshot.docs) {
-        final data = rentaDoc.data() as Map<String, dynamic>;
+        final data = rentaDoc.data();
         final estado = data['estado'] ?? '';
 
         // Parseo robusto de fechas
@@ -725,7 +727,7 @@ class _BusquedaScreenState extends State<BusquedaScreen> {
         );
 
         print(
-          '🚗 Renta existente (${estado}): $inicioRentaNormalizada -> $finRentaNormalizada',
+          '🚗 Renta existente ($estado): $inicioRentaNormalizada -> $finRentaNormalizada',
         );
 
         // Verificar si hay conflicto

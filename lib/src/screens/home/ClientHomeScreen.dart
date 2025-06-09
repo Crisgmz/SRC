@@ -5,8 +5,216 @@ import 'package:shimmer/shimmer.dart';
 import 'package:solutions_rent_car/src/screens/home/BusquedaAvanzadaScreen.dart';
 import 'package:solutions_rent_car/src/screens/home/BusquedaScreen.dart';
 import 'package:solutions_rent_car/src/screens/home/ClientProfileScreen.dart';
+import 'package:solutions_rent_car/src/screens/home/alternas/Todorentaspopulares.dart';
+import 'package:solutions_rent_car/src/screens/home/alternas/VehiculosPorMarcaScreen.dart';
+import 'package:solutions_rent_car/src/screens/home/todos_los_vehiculos_screen.dart';
 import 'package:solutions_rent_car/src/screens/misrentas/Cliente/ClienteRentasScreen.dart';
 import 'package:solutions_rent_car/src/vehiculos/ClienteDetalleVehiculoScreen.dart';
+
+// Singleton para manejo de caché global
+class DataCacheManager {
+  static final DataCacheManager _instance = DataCacheManager._internal();
+  factory DataCacheManager() => _instance;
+  DataCacheManager._internal();
+
+  // Cachés para diferentes tipos de datos
+  final Map<String, Map<String, dynamic>> _vehiculosCache = {};
+  final Map<String, Map<String, dynamic>> _marcasCache = {};
+  final Map<String, List<DocumentSnapshot>> _brandDocsCache = {};
+  final Map<String, List<DocumentSnapshot>> _featuredVehiclesCache = {};
+
+  // Control de tiempo de caché
+  final Map<String, DateTime> _cacheTimestamps = {};
+  static const Duration _cacheExpiration = Duration(minutes: 5);
+
+  // Verificar si el caché ha expirado
+  bool _isCacheExpired(String key) {
+    final timestamp = _cacheTimestamps[key];
+    if (timestamp == null) return true;
+    return DateTime.now().difference(timestamp) > _cacheExpiration;
+  }
+
+  // Actualizar timestamp del caché
+  void _updateCacheTimestamp(String key) {
+    _cacheTimestamps[key] = DateTime.now();
+  }
+
+  // Caché de vehículos
+  Future<Map<String, dynamic>> getVehiculo(String id) async {
+    final cacheKey = 'vehiculo_$id';
+
+    if (_vehiculosCache.containsKey(id) && !_isCacheExpired(cacheKey)) {
+      return _vehiculosCache[id]!;
+    }
+
+    try {
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('vehiculos')
+              .doc(id)
+              .get();
+
+      final data = doc.data() ?? {};
+      _vehiculosCache[id] = data;
+      _updateCacheTimestamp(cacheKey);
+
+      return data;
+    } catch (e) {
+      // Si falla la consulta pero tenemos caché, devolverlo aunque haya expirado
+      if (_vehiculosCache.containsKey(id)) {
+        return _vehiculosCache[id]!;
+      }
+      return {};
+    }
+  }
+
+  // Caché de marcas
+  Future<Map<String, dynamic>> getMarca(String id) async {
+    final cacheKey = 'marca_$id';
+
+    if (_marcasCache.containsKey(id) && !_isCacheExpired(cacheKey)) {
+      return _marcasCache[id]!;
+    }
+
+    try {
+      final doc =
+          await FirebaseFirestore.instance.collection('marcas').doc(id).get();
+
+      final data = doc.data() ?? {};
+      _marcasCache[id] = data;
+      _updateCacheTimestamp(cacheKey);
+
+      return data;
+    } catch (e) {
+      if (_marcasCache.containsKey(id)) {
+        return _marcasCache[id]!;
+      }
+      return {};
+    }
+  }
+
+  // Caché de marcas filtradas
+  Future<List<DocumentSnapshot>> getFilteredBrandDocs() async {
+    const cacheKey = 'filtered_brands';
+
+    if (_brandDocsCache.containsKey(cacheKey) && !_isCacheExpired(cacheKey)) {
+      return _brandDocsCache[cacheKey]!;
+    }
+
+    try {
+      // Obtener vehículos para filtrar marcas activas
+      final vehiculosSnapshot =
+          await FirebaseFirestore.instance.collection('vehiculos').get();
+
+      final Set<String> usedBrands =
+          vehiculosSnapshot.docs
+              .map((doc) => doc['marca']?.toString())
+              .whereType<String>()
+              .toSet();
+
+      // Consultar marcas
+      final marcasSnapshot =
+          await FirebaseFirestore.instance.collection('marcas').get();
+
+      final filteredDocs =
+          marcasSnapshot.docs.where((doc) {
+            final marca = doc['marca']?.toString();
+            return usedBrands.contains(marca);
+          }).toList();
+
+      _brandDocsCache[cacheKey] = filteredDocs;
+      _updateCacheTimestamp(cacheKey);
+
+      return filteredDocs;
+    } catch (e) {
+      if (_brandDocsCache.containsKey(cacheKey)) {
+        return _brandDocsCache[cacheKey]!;
+      }
+      return [];
+    }
+  }
+
+  // Caché de vehículos destacados
+  Future<List<DocumentSnapshot>> getFeaturedVehicles() async {
+    const cacheKey = 'featured_vehicles';
+
+    if (_featuredVehiclesCache.containsKey(cacheKey) &&
+        !_isCacheExpired(cacheKey)) {
+      return _featuredVehiclesCache[cacheKey]!;
+    }
+
+    try {
+      final snapshot =
+          await FirebaseFirestore.instance
+              .collection('vehiculos')
+              .where('destacado', isEqualTo: true)
+              .limit(6)
+              .get();
+
+      _featuredVehiclesCache[cacheKey] = snapshot.docs;
+      _updateCacheTimestamp(cacheKey);
+
+      return snapshot.docs;
+    } catch (e) {
+      if (_featuredVehiclesCache.containsKey(cacheKey)) {
+        return _featuredVehiclesCache[cacheKey]!;
+      }
+      return [];
+    }
+  }
+
+  // Limpiar caché cuando sea necesario
+  void clearExpiredCache() {
+    final now = DateTime.now();
+    final expiredKeys =
+        _cacheTimestamps.entries
+            .where((entry) => now.difference(entry.value) > _cacheExpiration)
+            .map((entry) => entry.key)
+            .toList();
+
+    for (final key in expiredKeys) {
+      _cacheTimestamps.remove(key);
+
+      if (key.startsWith('vehiculo_')) {
+        final id = key.substring(9);
+        _vehiculosCache.remove(id);
+      } else if (key.startsWith('marca_')) {
+        final id = key.substring(6);
+        _marcasCache.remove(id);
+      } else if (key == 'filtered_brands') {
+        _brandDocsCache.remove(key);
+      } else if (key == 'featured_vehicles') {
+        _featuredVehiclesCache.remove(key);
+      }
+    }
+  }
+
+  // Invalidar caché específico (útil después de actualizaciones)
+  void invalidateCache(String type, [String? id]) {
+    switch (type) {
+      case 'vehiculo':
+        if (id != null) {
+          _vehiculosCache.remove(id);
+          _cacheTimestamps.remove('vehiculo_$id');
+        }
+        break;
+      case 'marca':
+        if (id != null) {
+          _marcasCache.remove(id);
+          _cacheTimestamps.remove('marca_$id');
+        }
+        break;
+      case 'brands':
+        _brandDocsCache.clear();
+        _cacheTimestamps.remove('filtered_brands');
+        break;
+      case 'featured':
+        _featuredVehiclesCache.clear();
+        _cacheTimestamps.remove('featured_vehicles');
+        break;
+    }
+  }
+}
 
 class ClientHomeScreen extends StatefulWidget {
   const ClientHomeScreen({super.key});
@@ -17,20 +225,35 @@ class ClientHomeScreen extends StatefulWidget {
 
 class _ClientHomeScreenState extends State<ClientHomeScreen> {
   int _currentIndex = 0;
-
   late final List<Widget> _screens;
   String? _currentUserId;
+  final DataCacheManager _cacheManager = DataCacheManager();
 
   @override
   void initState() {
     super.initState();
     final uid = FirebaseAuth.instance.currentUser?.uid;
+    _currentUserId = uid;
+
     _screens = [
-      _HomeScreen(currentUserId: uid),
+      _HomeScreen(currentUserId: uid, cacheManager: _cacheManager),
       const BusquedaScreen(),
+      const TodosLosVehiculosScreen(),
       const ClientRentalsScreen(),
       const PantallaPerfilCliente(),
     ];
+
+    // Limpiar caché expirado periódicamente
+    _schedulePeriodicCacheCleanup();
+  }
+
+  void _schedulePeriodicCacheCleanup() {
+    Future.delayed(const Duration(minutes: 1), () {
+      if (mounted) {
+        _cacheManager.clearExpiredCache();
+        _schedulePeriodicCacheCleanup();
+      }
+    });
   }
 
   @override
@@ -42,32 +265,42 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
       backgroundColor: Colors.white,
       body: _screens[_currentIndex],
       floatingActionButton: Transform.translate(
-        offset: const Offset(0, 20),
-        child: Container(
-          height: screenWidth * 0.2,
-          width: screenWidth * 0.2,
-          padding: EdgeInsets.all(screenWidth * 0.01),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 8,
-                spreadRadius: 2,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
+        offset: const Offset(0, 26),
+        child: GestureDetector(
+          onTap: () => setState(() => _currentIndex = 2),
           child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.orange,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.storefront,
-              size: screenWidth * 0.075,
+            height: screenWidth * 0.18,
+            width: screenWidth * 0.18,
+            padding: EdgeInsets.all(screenWidth * 0.012),
+            decoration: BoxDecoration(
               color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color:
+                      _currentIndex == 2
+                          ? Colors.orange
+                          : Colors.black.withOpacity(0.2),
+                  blurRadius: 8,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.orange,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: _currentIndex == 2 ? Colors.orange : Colors.orange,
+                  width: 2,
+                ),
+              ),
+              child: Icon(
+                Icons.storefront,
+                size: screenWidth * 0.075,
+                color: Colors.white,
+              ),
             ),
           ),
         ),
@@ -104,7 +337,6 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                // Left side icons
                 Expanded(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -124,9 +356,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                     ],
                   ),
                 ),
-                // Empty space for FAB
                 SizedBox(width: screenWidth * 0.2),
-                // Right side icons
                 Expanded(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -134,13 +364,13 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                       _buildNavItem(
                         icon: Icons.shopping_bag_outlined,
                         label: 'Rentas',
-                        index: 2,
+                        index: 3,
                         screenWidth: screenWidth,
                       ),
                       _buildNavItem(
                         icon: Icons.person_outline,
                         label: 'Perfil',
-                        index: 3,
+                        index: 4,
                         screenWidth: screenWidth,
                       ),
                     ],
@@ -195,21 +425,56 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
   }
 }
 
-class _HomeScreen extends StatelessWidget {
+class _HomeScreen extends StatefulWidget {
   final String? currentUserId;
+  final DataCacheManager cacheManager;
 
-  const _HomeScreen({required this.currentUserId});
+  const _HomeScreen({required this.currentUserId, required this.cacheManager});
+
+  @override
+  State<_HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<_HomeScreen> {
+  // Streams con caché
+  Stream<QuerySnapshot>? _recentViewsStream;
+  Stream<QuerySnapshot>? _featuredVehiclesStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeStreams();
+  }
+
+  void _initializeStreams() {
+    if (widget.currentUserId != null) {
+      _recentViewsStream =
+          FirebaseFirestore.instance
+              .collection('vistas_recientes')
+              .where('userId', isEqualTo: widget.currentUserId)
+              .orderBy('timestamp', descending: true)
+              .limit(5)
+              .snapshots();
+    }
+
+    _featuredVehiclesStream =
+        FirebaseFirestore.instance
+            .collection('vehiculos')
+            .where('destacado', isEqualTo: true)
+            .limit(6)
+            .snapshots();
+  }
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
-    return ListView(
-      padding: EdgeInsets.zero,
+    return Column(
       children: [
-        // Header con tamaño adaptativo
+        // Header fijo
         Container(
+          width: double.infinity,
           padding: EdgeInsets.fromLTRB(
             screenWidth * 0.06,
             MediaQuery.of(context).padding.top + screenHeight * 0.02,
@@ -320,443 +585,316 @@ class _HomeScreen extends StatelessWidget {
           ),
         ),
 
-        SizedBox(height: screenHeight * 0.015),
-
-        // Brands section
-        FutureBuilder<List<DocumentSnapshot>>(
-          future: _getFilteredBrandDocs(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return SizedBox(
-                height: screenWidth * 0.25,
-                child: const Center(child: CircularProgressIndicator()),
-              );
-            }
-
-            final docs = snapshot.data!;
-
-            return SizedBox(
-              height: screenWidth * 0.25,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
-                itemCount: docs.length,
-                itemBuilder: (context, index) {
-                  final data = docs[index].data() as Map<String, dynamic>;
-                  final nombre = data['marca'] ?? 'Marca';
-                  final logoUrl = data['logo'] ?? '';
-                  return _buildBrandCard(nombre, logoUrl, screenWidth);
-                },
-              ),
-            );
-          },
-        ),
-
-        // Recently viewed section
-        Padding(
-          padding: EdgeInsets.fromLTRB(
-            screenWidth * 0.04,
-            0,
-            screenWidth * 0.04,
-            screenHeight * 0.01,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Expanded(
+          child: ListView(
+            padding: EdgeInsets.zero,
             children: [
-              Text(
-                'Recientes Vistas',
-                style: TextStyle(
-                  fontSize: screenWidth * 0.055,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
+              SizedBox(height: screenHeight * 0.015),
 
-        // Recently viewed cars
-        StreamBuilder<QuerySnapshot>(
-          stream:
-              FirebaseFirestore.instance
-                  .collection('vistas_recientes')
-                  .where('userId', isEqualTo: currentUserId)
-                  .orderBy('timestamp', descending: true)
-                  .limit(5)
-                  .snapshots(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return Container(
-                height: screenHeight * 0.42,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
-                  itemCount: 3,
-                  itemBuilder:
-                      (context, index) => _buildShimmerCard(
-                        width: screenWidth * 0.65,
-                        height: screenWidth * 0.25,
-                        screenWidth: screenWidth,
+              // Brands section con caché
+              FutureBuilder<List<DocumentSnapshot>>(
+                future: widget.cacheManager.getFilteredBrandDocs(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return SizedBox(
+                      height: screenWidth * 0.25,
+                      child: const Center(child: CircularProgressIndicator()),
+                    );
+                  }
+
+                  final docs = snapshot.data!;
+
+                  return SizedBox(
+                    height: screenWidth * 0.25,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: screenWidth * 0.04,
                       ),
-                ),
-              );
-            }
+                      itemCount: docs.length,
+                      itemBuilder: (context, index) {
+                        final data = docs[index].data() as Map<String, dynamic>;
+                        final nombre = data['marca'] ?? 'Marca';
+                        final logoUrl = data['logo'] ?? '';
 
-            final vistasRecientes = snapshot.data!.docs;
-
-            return SizedBox(
-              height: screenWidth * 0.28,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
-                itemCount: vistasRecientes.length,
-                itemBuilder: (context, index) {
-                  final vistaData =
-                      vistasRecientes[index].data() as Map<String, dynamic>;
-                  final vehiculoId = vistaData['vehiculoId'];
-
-                  return FutureBuilder<DocumentSnapshot>(
-                    future:
-                        FirebaseFirestore.instance
-                            .collection('vehiculos')
-                            .doc(vehiculoId)
-                            .get(),
-                    builder: (context, vehiculoSnapshot) {
-                      if (!vehiculoSnapshot.hasData) {
-                        return _buildShimmerCard(
-                          width: screenWidth * 0.65,
-                          height: screenWidth * 0.25,
-                          screenWidth: screenWidth,
-                        );
-                      }
-
-                      if (!vehiculoSnapshot.data!.exists) {
-                        return const SizedBox.shrink();
-                      }
-
-                      final vehiculoData =
-                          vehiculoSnapshot.data!.data() as Map<String, dynamic>;
-                      final nombre = vehiculoData['nombre'] ?? 'Vehículo';
-                      final precio =
-                          vehiculoData['precioPorDia'] != null
-                              ? '\$${vehiculoData['precioPorDia']}'
-                              : '\$99';
-                      final imagenes =
-                          vehiculoData['imagenes'] as List<dynamic>? ?? [];
-                      final imagen = imagenes.isNotEmpty ? imagenes.first : '';
-
-                      return GestureDetector(
-                        onTap: () async {
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (_) => ClienteDetalleVehiculoScreen(
-                                    idVehiculo: vehiculoId,
-                                  ),
-                            ),
-                          );
-                          await _registerVehicleView(vehiculoId);
-                        },
-                        child: _buildRecentCarCard(
-                          nombre,
-                          'Solutions\nRent A Car',
-                          precio,
-                          imagen,
-                          screenWidth,
-                          screenHeight,
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            );
-          },
-        ),
-
-        // Popular rentals section
-        Padding(
-          padding: EdgeInsets.fromLTRB(
-            screenWidth * 0.042,
-            0,
-            screenWidth * 0.042,
-            screenHeight * 0.01,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Rentas Populares',
-                style: TextStyle(
-                  fontSize: screenWidth * 0.058,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Flexible(
-                child: TextButton(
-                  onPressed: () {},
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Ver Todo',
-                        style: TextStyle(
-                          color: const Color(0xFFF9A825),
-                          fontWeight: FontWeight.w500,
-                          fontSize: screenWidth * 0.035,
-                        ),
-                      ),
-                      Icon(
-                        Icons.arrow_forward,
-                        color: const Color(0xFFF9A825),
-                        size: screenWidth * 0.045,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        SizedBox(height: screenHeight * 0.002),
-
-        StreamBuilder<QuerySnapshot>(
-          stream:
-              FirebaseFirestore.instance
-                  .collection('vehiculos')
-                  .where('destacado', isEqualTo: true)
-                  .limit(6)
-                  .snapshots(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return SizedBox(
-                height: screenWidth * 0.85,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: EdgeInsets.only(left: screenWidth * 0.042),
-                  itemCount: 3,
-                  itemBuilder:
-                      (context, index) => _buildShimmerCard(
-                        width: screenWidth * 0.45,
-                        height: screenWidth * 0.8,
-                        screenWidth: screenWidth,
-                      ),
-                ),
-              );
-            }
-
-            final docs = snapshot.data!.docs;
-
-            return SizedBox(
-              height: screenWidth * 0.85,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: EdgeInsets.only(right: screenWidth * 0.032),
-                itemCount: docs.length,
-                itemBuilder: (context, index) {
-                  final data = docs[index].data() as Map<String, dynamic>;
-                  final idVehiculo = docs[index].id;
-                  final nombre = data['nombre'] ?? 'Vehículo';
-                  final pasajeros = data['pasajeros']?.toString() ?? 'N/A';
-                  final combustible = data['combustible'] ?? 'N/A';
-                  final transmision = data['transmision'] ?? 'N/A';
-                  final precio =
-                      data['precioPorDia'] != null
-                          ? '\$${data['precioPorDia']}'
-                          : '\$99';
-                  final imagenes = data['imagenes'] as List<dynamic>? ?? [];
-                  final imagen = imagenes.isNotEmpty ? imagenes.first : '';
-
-                  return GestureDetector(
-                    onTap: () async {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder:
-                              (_) => ClienteDetalleVehiculoScreen(
-                                idVehiculo: idVehiculo,
-                              ),
-                        ),
-                      );
-                      await _registerVehicleView(idVehiculo);
-                    },
-                    child: Container(
-                      width: screenWidth * 0.45,
-                      margin: EdgeInsets.only(
-                        left: index == 0 ? screenWidth * 0.042 : 0,
-                        right: screenWidth * 0.032,
-                        top: screenWidth * 0.03,
-                        bottom: screenWidth * 0.03,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.15),
-                            blurRadius: 10,
-                            spreadRadius: 2,
-                            offset: const Offset(0, 4),
-                          ),
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 6,
-                            spreadRadius: 0,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.all(screenWidth * 0.021),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: AspectRatio(
-                                aspectRatio: 3 / 2,
-                                child:
-                                    imagen.isNotEmpty
-                                        ? Image.network(
-                                          imagen,
-                                          fit: BoxFit.cover,
-                                          errorBuilder:
-                                              (_, __, ___) => Icon(
-                                                Icons.image_not_supported,
-                                                size: screenWidth * 0.1,
-                                                color: Colors.grey,
-                                              ),
-                                        )
-                                        : Container(
-                                          color: Colors.grey[200],
-                                          child: Icon(
-                                            Icons.directions_car,
-                                            size: screenWidth * 0.1,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-                              ),
-                            ),
-                          ),
-                          Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: screenWidth * 0.026,
-                            ),
-                            child: Text(
-                              nombre,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: screenWidth * 0.035,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          SizedBox(height: screenWidth * 0.01),
-                          Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: screenWidth * 0.026,
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.settings,
-                                  size: screenWidth * 0.035,
-                                  color: Colors.grey[600],
-                                ),
-                                SizedBox(width: screenWidth * 0.01),
-                                Flexible(
-                                  child: Text(
-                                    transmision,
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.03,
-                                      color: Colors.black87,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                SizedBox(width: screenWidth * 0.02),
-                                Icon(
-                                  Icons.local_gas_station,
-                                  size: screenWidth * 0.035,
-                                  color: Colors.grey[600],
-                                ),
-                                SizedBox(width: screenWidth * 0.01),
-                                Flexible(
-                                  child: Text(
-                                    combustible,
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.03,
-                                      color: Colors.black87,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          SizedBox(height: screenWidth * 0.02),
-                          Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: screenWidth * 0.026,
-                            ),
-                            child: _buildIconInfo(
-                              Icons.people,
-                              '$pasajeros Pasajeros',
-                              screenWidth,
-                            ),
-                          ),
-                          const Spacer(),
-                          Padding(
-                            padding: EdgeInsets.fromLTRB(
-                              screenWidth * 0.026,
-                              screenWidth * 0.01,
-                              screenWidth * 0.026,
-                              screenWidth * 0.03,
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.attach_money,
-                                  color: const Color(0xFFF9A825),
-                                  size: screenWidth * 0.045,
-                                ),
-                                Text(
-                                  precio,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: screenWidth * 0.045,
-                                    color: const Color(0xFFF9A825),
-                                  ),
-                                ),
-                                Text(
-                                  "/día",
-                                  style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: screenWidth * 0.03,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                        return _buildBrandCard(nombre, logoUrl, screenWidth);
+                      },
                     ),
                   );
                 },
               ),
-            );
-          },
-        ),
 
-        SizedBox(height: screenWidth * 0.06),
+              // Recently viewed section
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  screenWidth * 0.04,
+                  0,
+                  screenWidth * 0.04,
+                  screenHeight * 0.01,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Recientes Vistas',
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.055,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Recently viewed cars con caché
+              if (_recentViewsStream != null)
+                StreamBuilder<QuerySnapshot>(
+                  stream: _recentViewsStream,
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return SizedBox(
+                        height: screenHeight * 0.42,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: screenWidth * 0.04,
+                          ),
+                          itemCount: 3,
+                          itemBuilder:
+                              (context, index) => _buildShimmerCard(
+                                width: screenWidth * 0.65,
+                                height: screenWidth * 0.25,
+                                screenWidth: screenWidth,
+                              ),
+                        ),
+                      );
+                    }
+
+                    final vistasRecientes = snapshot.data!.docs;
+
+                    return SizedBox(
+                      height: screenWidth * 0.34,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.04,
+                          right: screenWidth * 0.04,
+                          top: screenWidth * 0.02,
+                          bottom: screenWidth * 0.02,
+                        ),
+                        itemCount: vistasRecientes.length,
+                        itemBuilder: (context, index) {
+                          final vistaData =
+                              vistasRecientes[index].data()
+                                  as Map<String, dynamic>;
+                          final vehiculoId = vistaData['vehiculoId'];
+
+                          return FutureBuilder<Map<String, dynamic>>(
+                            future: widget.cacheManager.getVehiculo(vehiculoId),
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData) {
+                                return _buildShimmerCard(
+                                  width: screenWidth * 0.65,
+                                  height: screenWidth * 0.25,
+                                  screenWidth: screenWidth,
+                                );
+                              }
+
+                              final vehiculoData = snapshot.data!;
+                              final nombre =
+                                  vehiculoData['nombre'] ?? 'Vehículo';
+                              final precio =
+                                  vehiculoData['precioPorDia'] != null
+                                      ? '\$${vehiculoData['precioPorDia']}'
+                                      : '\$99';
+                              final imagenes =
+                                  vehiculoData['imagenes'] as List<dynamic>? ??
+                                  [];
+                              final imagen =
+                                  imagenes.isNotEmpty ? imagenes.first : '';
+
+                              return GestureDetector(
+                                onTap: () async {
+                                  await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (_) => ClienteDetalleVehiculoScreen(
+                                            idVehiculo: vehiculoId,
+                                          ),
+                                    ),
+                                  );
+                                  await _registerVehicleView(vehiculoId);
+                                },
+                                child: Padding(
+                                  padding: EdgeInsets.only(
+                                    right: screenWidth * 0.04,
+                                    bottom: screenWidth * 0.02,
+                                  ),
+                                  child: _buildRecentCarCard(
+                                    nombre,
+                                    'Solutions\nRent A Car',
+                                    precio,
+                                    imagen,
+                                    screenWidth,
+                                    MediaQuery.of(context).size.height,
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+              //        SizedBox(height: screenWidth * 0.04), // ← Espacio entre secciones
+              // Popular rentals section
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  screenWidth * 0.042,
+                  0,
+                  screenWidth * 0.042,
+                  screenHeight * 0.01,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Rentas Populares',
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.058,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Flexible(
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const RentasPopularesScreen(),
+                            ),
+                          );
+                        },
+
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Ver Todo',
+                              style: TextStyle(
+                                color: const Color(0xFFF9A825),
+                                fontWeight: FontWeight.w500,
+                                fontSize: screenWidth * 0.035,
+                              ),
+                            ),
+                            Icon(
+                              Icons.arrow_forward,
+                              color: const Color(0xFFF9A825),
+                              size: screenWidth * 0.045,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Popular rentals con caché
+              StreamBuilder<QuerySnapshot>(
+                stream: _featuredVehiclesStream,
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return SizedBox(
+                      height: screenWidth * 0.85,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: EdgeInsets.only(left: screenWidth * 0.042),
+                        itemCount: 3,
+                        itemBuilder:
+                            (context, index) => _buildShimmerCard(
+                              width: screenWidth * 0.45,
+                              height: screenWidth * 0.8,
+                              screenWidth: screenWidth,
+                            ),
+                      ),
+                    );
+                  }
+
+                  final docs = snapshot.data!.docs;
+
+                  return Column(
+                    children: [
+                      SizedBox(
+                        height: screenWidth * 0.75,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          padding: EdgeInsets.only(right: screenWidth * 0.032),
+                          itemCount: docs.length,
+                          itemBuilder: (context, index) {
+                            final data =
+                                docs[index].data() as Map<String, dynamic>;
+                            final idVehiculo = docs[index].id;
+                            final nombre = data['nombre'] ?? 'Vehículo';
+                            final pasajeros =
+                                data['pasajeros']?.toString() ?? 'N/A';
+                            final combustible = data['combustible'] ?? 'N/A';
+                            final transmision = data['transmision'] ?? 'N/A';
+                            final precio =
+                                data['precioPorDia'] != null
+                                    ? '\$${data['precioPorDia']}'
+                                    : '\$99';
+                            final imagenes =
+                                data['imagenes'] as List<dynamic>? ?? [];
+                            final imagen =
+                                imagenes.isNotEmpty ? imagenes.first : '';
+
+                            return GestureDetector(
+                              onTap: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (_) => ClienteDetalleVehiculoScreen(
+                                          idVehiculo: idVehiculo,
+                                        ),
+                                  ),
+                                );
+                                await _registerVehicleView(idVehiculo);
+                              },
+                              child: _buildFeaturedCarCard(
+                                idVehiculo,
+                                nombre,
+                                pasajeros,
+                                combustible,
+                                transmision,
+                                precio,
+                                imagen,
+                                screenWidth,
+                                index,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      SizedBox(height: screenWidth * 0.04),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
 
-  // Método para registrar la vista de un vehículo
+  // Método para registrar la vista de un vehículo (optimizado)
   Future<void> _registerVehicleView(String vehiculoId) async {
+    if (widget.currentUserId == null) return;
+
     try {
       final vistasRef = FirebaseFirestore.instance.collection(
         'vistas_recientes',
@@ -765,7 +903,7 @@ class _HomeScreen extends StatelessWidget {
       // Verificar si ya existe una vista de este vehículo por este usuario
       final existingView =
           await vistasRef
-              .where('userId', isEqualTo: currentUserId)
+              .where('userId', isEqualTo: widget.currentUserId)
               .where('vehiculoId', isEqualTo: vehiculoId)
               .get();
 
@@ -777,7 +915,7 @@ class _HomeScreen extends StatelessWidget {
       } else {
         // Si no existe, crear nueva vista
         await vistasRef.add({
-          'userId': currentUserId,
+          'userId': widget.currentUserId,
           'vehiculoId': vehiculoId,
           'timestamp': FieldValue.serverTimestamp(),
         });
@@ -786,7 +924,7 @@ class _HomeScreen extends StatelessWidget {
       // Limpiar vistas antiguas (mantener solo las últimas 5)
       final allViews =
           await vistasRef
-              .where('userId', isEqualTo: currentUserId)
+              .where('userId', isEqualTo: widget.currentUserId)
               .orderBy('timestamp', descending: true)
               .get();
 
@@ -865,60 +1003,70 @@ class _HomeScreen extends StatelessWidget {
   }
 
   Widget _buildBrandCard(String name, String logoUrl, double screenWidth) {
-    return Container(
-      margin: EdgeInsets.symmetric(
-        vertical: screenWidth * 0.04,
-        horizontal: screenWidth * 0.015,
-      ),
-      width: screenWidth * 0.2,
-      height: screenWidth * 0.2,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            blurRadius: 10,
-            spreadRadius: 2,
-            offset: const Offset(0, 4),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => VehiculosPorMarcaScreen(marca: name),
           ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 6,
-            spreadRadius: 0,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Center(
-        child: SizedBox(
-          width: screenWidth * 0.16,
-          height: screenWidth * 0.16,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child:
-                logoUrl.isNotEmpty
-                    ? Image.network(
-                      logoUrl,
-                      fit: BoxFit.contain,
-                      errorBuilder:
-                          (_, __, ___) => Container(
-                            color: Colors.grey[200],
-                            child: Icon(
-                              Icons.image_not_supported,
-                              size: screenWidth * 0.075,
-                              color: Colors.grey[600],
+        );
+      },
+      child: Container(
+        margin: EdgeInsets.symmetric(
+          vertical: screenWidth * 0.04,
+          horizontal: screenWidth * 0.015,
+        ),
+        width: screenWidth * 0.2,
+        height: screenWidth * 0.2,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 10,
+              spreadRadius: 2,
+              offset: const Offset(0, 4),
+            ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 6,
+              spreadRadius: 0,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Center(
+          child: SizedBox(
+            width: screenWidth * 0.16,
+            height: screenWidth * 0.16,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child:
+                  logoUrl.isNotEmpty
+                      ? Image.network(
+                        logoUrl,
+                        fit: BoxFit.contain,
+                        errorBuilder:
+                            (_, __, ___) => Container(
+                              color: Colors.grey[200],
+                              child: Icon(
+                                Icons.image_not_supported,
+                                size: screenWidth * 0.075,
+                                color: Colors.grey[600],
+                              ),
                             ),
-                          ),
-                    )
-                    : Container(
-                      color: Colors.grey[200],
-                      child: Icon(
-                        Icons.directions_car,
-                        size: screenWidth * 0.075,
-                        color: Colors.grey[600],
+                      )
+                      : Container(
+                        color: Colors.grey[200],
+                        child: Icon(
+                          Icons.directions_car,
+                          size: screenWidth * 0.075,
+                          color: Colors.grey[600],
+                        ),
                       ),
-                    ),
+            ),
           ),
         ),
       ),
@@ -943,35 +1091,37 @@ class _HomeScreen extends StatelessWidget {
         screenHeight * 0.0025,
       ),
       width: screenWidth * 0.65,
-      height: screenHeight * 0.25, // Mantenemos la altura original
+      height: screenHeight * 0.25,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(screenWidth * 0.03),
+        borderRadius: BorderRadius.circular(12), // Valor fijo como las marcas
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.15),
-            blurRadius: screenWidth * 0.025,
-            spreadRadius: screenWidth * 0.005,
-            offset: Offset(0, screenHeight * 0.005),
+            blurRadius: 10, // Valor fijo como las marcas
+            spreadRadius: 2, // Valor fijo como las marcas
+            offset: const Offset(0, 4), // Valor fijo como las marcas
           ),
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: screenWidth * 0.015,
-            spreadRadius: 0,
-            offset: Offset(0, screenHeight * 0.005),
+            blurRadius: 6, // Valor fijo como las marcas
+            spreadRadius: 0, // Valor fijo como las marcas
+            offset: const Offset(0, 2), // Valor fijo como las marcas
           ),
         ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Imagen - sin cambios
+          // Imagen
           Padding(
             padding: EdgeInsets.all(screenWidth * 0.02),
             child: Hero(
               tag: 'vehicle_image_$vehiculoId',
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(screenWidth * 0.025),
+                borderRadius: BorderRadius.circular(
+                  8,
+                ), // Consistente con las marcas
                 child: SizedBox(
                   width: screenWidth * 0.25,
                   height: screenHeight * 0.18,
@@ -1003,7 +1153,7 @@ class _HomeScreen extends StatelessWidget {
             ),
           ),
 
-          // Contenido textual - TEXTOS OPTIMIZADOS
+          // Contenido textual
           Expanded(
             child: Padding(
               padding: EdgeInsets.symmetric(
@@ -1014,53 +1164,45 @@ class _HomeScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Título - Reducido de 0.04 a 0.035
                   Text(
                     title,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: screenWidth * 0.035, // Reducido
-                      height: 1.1, // Control preciso del line height
-                    ),
-                    maxLines: 2, // Permitir 2 líneas
-                    overflow: TextOverflow.ellipsis,
-                  ),
-
-                  SizedBox(height: screenHeight * 0.004), // Espaciado reducido
-                  // Subtítulo - Reducido de 0.03 a 0.028
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: screenWidth * 0.028, // Reducido
-                      height: 1.2, // Control del line height
+                      fontSize: screenWidth * 0.035,
+                      height: 1.1,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-
-                  SizedBox(height: screenHeight * 0.008), // Espaciado reducido
-                  // Precio y estrella - Ajustado
+                  SizedBox(height: screenHeight * 0.004),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: screenWidth * 0.028,
+                      height: 1.2,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: screenHeight * 0.008),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Icon(
                         Icons.star,
-                        size: screenWidth * 0.032, // Reducido de 0.035 a 0.032
+                        size: screenWidth * 0.032,
                         color: Colors.amber,
                       ),
-                      SizedBox(
-                        width: screenWidth * 0.008,
-                      ), // Espaciado reducido
+                      SizedBox(width: screenWidth * 0.008),
                       Flexible(
                         child: Text(
                           price,
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize:
-                                screenWidth * 0.035, // Reducido de 0.04 a 0.035
+                            fontSize: screenWidth * 0.035,
                             color: const Color(0xFFF9A825),
-                            height: 1.0, // Sin espacio extra
+                            height: 1.0,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1069,8 +1211,7 @@ class _HomeScreen extends StatelessWidget {
                         "/día",
                         style: TextStyle(
                           color: Colors.grey,
-                          fontSize:
-                              screenWidth * 0.026, // Reducido de 0.03 a 0.026
+                          fontSize: screenWidth * 0.026,
                           height: 1.0,
                         ),
                       ),
@@ -1078,6 +1219,173 @@ class _HomeScreen extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeaturedCarCard(
+    String idVehiculo,
+    String nombre,
+    String pasajeros,
+    String combustible,
+    String transmision,
+    String precio,
+    String imagen,
+    double screenWidth,
+    int index,
+  ) {
+    return Container(
+      margin: EdgeInsets.only(
+        left: screenWidth * 0.035,
+        right: screenWidth * 0.015, // Agregado margen derecho
+        top: screenWidth * 0.02, // Agregado margen superior
+        bottom: screenWidth * 0.02, // Reducido el margen inferior
+      ),
+      width: screenWidth * 0.45,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 10,
+            spreadRadius: 0, // Cambiado de 2 a 0 para evitar superposición
+            offset: const Offset(
+              0,
+              2,
+            ), // Cambiado de (0, 0) a (0, 2) para sombra más natural
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 6,
+            spreadRadius: 0,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.only(
+              left: screenWidth * 0.015,
+              right: screenWidth * 0.015,
+              top: screenWidth * 0.015,
+              bottom: screenWidth * 0.01, // menor separación abajo
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: AspectRatio(
+                aspectRatio: 4 / 3,
+                child: Image.network(
+                  imagen,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  errorBuilder:
+                      (_, __, ___) => Container(
+                        color: Colors.grey[300],
+                        child: Icon(Icons.image_not_supported, size: 40),
+                      ),
+                ),
+              ),
+            ),
+          ),
+
+          Padding(
+            padding: EdgeInsets.all(screenWidth * 0.03),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  nombre,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: screenWidth * 0.035,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: screenWidth * 0.01),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.settings,
+                      size: screenWidth * 0.035,
+                      color: Colors.grey[600],
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      transmision,
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.028,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.local_gas_station,
+                      size: screenWidth * 0.035,
+                      color: Colors.grey[600],
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      combustible,
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.028,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.event_seat,
+                      size: screenWidth * 0.035,
+                      color: Colors.grey[600],
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      '$pasajeros Pasajeros',
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.028,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: screenWidth * 0.02),
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: precio,
+                        style: TextStyle(
+                          fontSize: screenWidth * 0.036,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFFF9A825),
+                        ),
+                      ),
+                      TextSpan(
+                        text: ' /día',
+                        style: TextStyle(
+                          fontSize: screenWidth * 0.03,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ],

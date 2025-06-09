@@ -692,7 +692,7 @@ class _ClientRentalsScreenState extends State<ClientRentalsScreen> {
       case 'cancelada':
         return Colors.red.withOpacity(0.2);
       case 'cancelacion_pendiente':
-        return const Color.fromARGB(255, 255, 215, 175)!;
+        return const Color.fromARGB(255, 255, 215, 175);
       default:
         return Colors.grey.withOpacity(0.2);
     }

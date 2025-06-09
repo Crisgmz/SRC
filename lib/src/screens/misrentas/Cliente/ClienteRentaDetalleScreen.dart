@@ -561,7 +561,7 @@ class ClienteRentaDetallesScreen extends StatelessWidget {
       case 'cancelada':
         return Colors.red[100]!;
       case 'cancelacion_pendiente':
-        return const Color.fromARGB(255, 255, 215, 175)!;
+        return const Color.fromARGB(255, 255, 215, 175);
       default:
         return Colors.grey[100]!;
     }

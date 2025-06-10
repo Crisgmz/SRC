@@ -44,7 +44,7 @@ class RentasPopularesScreen extends StatelessWidget {
                   crossAxisCount;
 
               // ⬇ Reducido el aspect ratio = tarjetas más altas
-              final aspectRatio = 0.59;
+              final aspectRatio = 0.58;
 
               return GridView.builder(
                 padding: EdgeInsets.all(screenWidth * 0.04),

@@ -588,6 +588,7 @@ class _HomeScreenState extends State<_HomeScreen> {
         Expanded(
           child: ListView(
             padding: EdgeInsets.zero,
+            physics: const BouncingScrollPhysics(),
             children: [
               SizedBox(height: screenHeight * 0.015),
 
@@ -600,6 +601,7 @@ class _HomeScreenState extends State<_HomeScreen> {
                       height: screenWidth * 0.25,
                       child: ListView.builder(
                         scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
                         padding: EdgeInsets.symmetric(
                           horizontal: screenWidth * 0.04,
                         ),
@@ -616,6 +618,7 @@ class _HomeScreenState extends State<_HomeScreen> {
                     height: screenWidth * 0.25,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
                       padding: EdgeInsets.symmetric(
                         horizontal: screenWidth * 0.04,
                       ),
@@ -664,6 +667,7 @@ class _HomeScreenState extends State<_HomeScreen> {
                         height: screenHeight * 0.42,
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
                           padding: EdgeInsets.symmetric(
                             horizontal: screenWidth * 0.04,
                           ),
@@ -684,6 +688,7 @@ class _HomeScreenState extends State<_HomeScreen> {
                       height: screenWidth * 0.34,
                       child: ListView.builder(
                         scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
                         padding: EdgeInsets.only(
                           left: screenWidth * 0.04,
                           right: screenWidth * 0.04,
@@ -819,6 +824,7 @@ class _HomeScreenState extends State<_HomeScreen> {
                       height: screenWidth * 0.85,
                       child: ListView.builder(
                         scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
                         padding: EdgeInsets.only(left: screenWidth * 0.042),
                         itemCount: 3,
                         itemBuilder:
@@ -839,6 +845,7 @@ class _HomeScreenState extends State<_HomeScreen> {
                         height: screenWidth * 0.75,
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
                           padding: EdgeInsets.only(right: screenWidth * 0.032),
                           itemCount: docs.length,
                           itemBuilder: (context, index) {

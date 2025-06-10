@@ -598,7 +598,15 @@ class _HomeScreenState extends State<_HomeScreen> {
                   if (!snapshot.hasData) {
                     return SizedBox(
                       height: screenWidth * 0.25,
-                      child: const Center(child: CircularProgressIndicator()),
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenWidth * 0.04,
+                        ),
+                        itemCount: 5,
+                        itemBuilder: (_, __) =>
+                            _buildBrandShimmerCard(screenWidth),
+                      ),
                     );
                   }
 
@@ -994,6 +1002,25 @@ class _HomeScreenState extends State<_HomeScreen> {
         margin: EdgeInsets.only(right: screenWidth * 0.04),
         width: width,
         height: height,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBrandShimmerCard(double screenWidth) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: Container(
+        margin: EdgeInsets.symmetric(
+          vertical: screenWidth * 0.04,
+          horizontal: screenWidth * 0.015,
+        ),
+        width: screenWidth * 0.2,
+        height: screenWidth * 0.2,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),

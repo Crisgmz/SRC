@@ -532,7 +532,7 @@ class _LoginScreenState extends State<LoginScreen> {
             MaterialPageRoute(builder: (context) => const ClientHomeScreen()),
           );
         } else if (rol?.toLowerCase() == 'vendedor') {
-          await NotificationService.updateToken(userId);
+          await NotificationService().updateToken(userId);
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const SellerHomeScreen()),

@@ -7,8 +7,10 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:solutions_rent_car/firebase_options.dart';
 import 'package:solutions_rent_car/src/screens/auth/register_screen.dart';
 import 'package:solutions_rent_car/src/screens/auth/login_screen.dart';
-import 'package:solutions_rent_car/src/screens/home/ClientHomeScreen.dart'; // Ajusta la ruta si es diferente
+import 'package:solutions_rent_car/src/screens/home/ClientHomeScreen.dart';
 import 'package:solutions_rent_car/src/services/notification_service.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,7 +44,7 @@ class MyApp extends StatelessWidget {
     );
 
     await initializeDateFormatting('es', null);
-    await NotificationService.initialize();
+    await NotificationService().init();
   }
 
   @override

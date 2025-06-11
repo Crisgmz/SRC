@@ -24,8 +24,8 @@ class _SellerHomeScreenState extends State<SellerHomeScreen> {
     super.initState();
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) {
-      NotificationService.updateToken(uid);
-      NotificationService.listenForRentas(uid);
+      NotificationService().updateToken(uid);
+      NotificationService().listenForRentas(uid);
     }
   }
 

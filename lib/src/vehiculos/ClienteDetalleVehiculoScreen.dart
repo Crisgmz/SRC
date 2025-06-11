@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
@@ -58,10 +57,7 @@ class _ClienteDetalleVehiculoScreenState
   Future<void> _loadUserData() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final doc = await CacheService.getDocument(
-        'usuarios',
-        user.uid,
-      );
+      final doc = await CacheService.getDocument('usuarios', user.uid);
       if (doc.exists) {
         setState(() {
           nombreCliente = doc['name'] ?? '';
@@ -72,10 +68,7 @@ class _ClienteDetalleVehiculoScreenState
   }
 
   Future<void> _loadVehiculoData() async {
-    final doc = await CacheService.getDocument(
-      'vehiculos',
-      widget.idVehiculo,
-    );
+    final doc = await CacheService.getDocument('vehiculos', widget.idVehiculo);
 
     if (!doc.exists) {
       setState(() => vehiculoNoEncontrado = true);

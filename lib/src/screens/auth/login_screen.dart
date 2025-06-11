@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:solutions_rent_car/src/screens/home/ClientHomeScreen.dart';
 import 'package:solutions_rent_car/src/screens/home/SellerHomeScreen.dart';
 import 'package:flutter/foundation.dart'; // asegúrate de tener esto
+import 'package:solutions_rent_car/src/services/notification_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -532,6 +533,7 @@ class _LoginScreenState extends State<LoginScreen> {
             MaterialPageRoute(builder: (context) => const ClientHomeScreen()),
           );
         } else if (rol?.toLowerCase() == 'vendedor') {
+          await NotificationService.updateToken(userId);
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const SellerHomeScreen()),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
+import 'package:solutions_rent_car/src/utils/cache_service.dart';
 import 'package:solutions_rent_car/src/screens/rentas/SeleccionFechaHoraScreen.dart';
 
 class ClienteDetalleVehiculoScreen extends StatefulWidget {
@@ -57,11 +58,10 @@ class _ClienteDetalleVehiculoScreenState
   Future<void> _loadUserData() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final doc =
-          await FirebaseFirestore.instance
-              .collection('usuarios')
-              .doc(user.uid)
-              .get();
+      final doc = await CacheService.getDocument(
+        'usuarios',
+        user.uid,
+      );
       if (doc.exists) {
         setState(() {
           nombreCliente = doc['name'] ?? '';
@@ -72,11 +72,10 @@ class _ClienteDetalleVehiculoScreenState
   }
 
   Future<void> _loadVehiculoData() async {
-    final doc =
-        await FirebaseFirestore.instance
-            .collection('vehiculos')
-            .doc(widget.idVehiculo)
-            .get();
+    final doc = await CacheService.getDocument(
+      'vehiculos',
+      widget.idVehiculo,
+    );
 
     if (!doc.exists) {
       setState(() => vehiculoNoEncontrado = true);

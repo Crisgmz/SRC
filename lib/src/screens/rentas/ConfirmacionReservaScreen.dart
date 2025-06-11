@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:solutions_rent_car/src/screens/home/ClientHomeScreen.dart';
+import 'package:solutions_rent_car/src/utils/cache_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:math';
 
@@ -64,11 +65,11 @@ class _ConfirmacionReservaScreenState extends State<ConfirmacionReservaScreen> {
       final String idVehiculo = widget.vehiculoData['idVehiculo'];
 
       if (idVehiculo.isNotEmpty) {
-        final snapshot =
-            await FirebaseFirestore.instance
-                .collection('vehiculos')
-                .where('idVehiculo', isEqualTo: idVehiculo)
-                .get();
+        final snapshot = await CacheService.queryCollection(
+          'vehiculos',
+          'idVehiculo',
+          idVehiculo,
+        );
 
         if (snapshot.docs.isNotEmpty) {
           // Actualizamos con los datos más recientes

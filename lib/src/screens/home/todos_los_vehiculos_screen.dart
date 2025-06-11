@@ -258,7 +258,7 @@ class _TodosLosVehiculosScreenState extends State<TodosLosVehiculosScreen> {
     final pasajeros =
         snapshot.docs
             .map((doc) => doc['pasajeros'])
-            .where((val) => val is int)
+            .whereType<int>()
             .cast<int>()
             .toSet()
             .toList();

@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:solutions_rent_car/src/screens/misrentas/Proveedor/ProveedorRentasScreen.dart';
 import 'package:solutions_rent_car/src/vehiculos/Proveedor/ConfiguraciónEmpresaScreen.dart';
 import 'package:solutions_rent_car/src/vehiculos/Proveedor/MisVehiculosScreen.dart';
-import 'package:solutions_rent_car/src/screens/misrentas/Proveedor/ProveedorRentasScreen.dart';
 import 'package:solutions_rent_car/src/services/notification_service.dart';
 
 class SellerHomeScreen extends StatefulWidget {

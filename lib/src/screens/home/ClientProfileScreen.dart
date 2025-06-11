@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:solutions_rent_car/src/screens/auth/login_screen.dart';
 
 class PantallaPerfilCliente extends StatefulWidget {
   const PantallaPerfilCliente({super.key});
@@ -31,6 +32,15 @@ class _PantallaPerfilClienteState extends State<PantallaPerfilCliente> {
     setState(() {
       userData = doc.data();
     });
+  }
+
+  Future<void> _logout() async {
+    await FirebaseAuth.instance.signOut();
+    if (context.mounted) {
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
+    }
   }
 
   @override
@@ -63,7 +73,7 @@ class _PantallaPerfilClienteState extends State<PantallaPerfilCliente> {
                         CircleAvatar(
                           radius: 50,
                           backgroundImage: NetworkImage(
-                            "https://i.pravatar.cc/300", // Reemplazar por userData['fotoUrl'] si lo tienes
+                            "https://i.pravatar.cc/300",
                           ),
                         ),
                         Container(
@@ -101,7 +111,6 @@ class _PantallaPerfilClienteState extends State<PantallaPerfilCliente> {
                       children: [
                         _opcionPerfil(Icons.person, "Mi perfil"),
                         _opcionPerfil(Icons.receipt_long, "Mis reservaciones"),
-
                         _opcionPerfil(Icons.settings, "Configuración"),
                         _opcionPerfil(Icons.help_outline, "Centro de ayuda"),
                         _opcionPerfil(
@@ -117,6 +126,18 @@ class _PantallaPerfilClienteState extends State<PantallaPerfilCliente> {
                               )
                               : 'Desconocido',
                         ),
+                        const SizedBox(height: 30),
+                        ElevatedButton.icon(
+                          onPressed: _logout,
+                          icon: const Icon(Icons.logout),
+                          label: const Text("Cerrar sesión"),
+                          style: ElevatedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.red,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                        const SizedBox(height: 30),
                       ],
                     ),
                   ),

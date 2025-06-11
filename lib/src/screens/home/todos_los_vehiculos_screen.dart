@@ -226,6 +226,46 @@ class _TodosLosVehiculosScreenState extends State<TodosLosVehiculosScreen> {
     );
   }
 
+  Future<List<String>> _getUniqueTransmisiones() async {
+    final snapshot =
+        await FirebaseFirestore.instance.collection('vehiculos').get();
+    final transmisiones =
+        snapshot.docs
+            .map((doc) => doc['transmision']?.toString() ?? '')
+            .toSet()
+            .toList();
+    transmisiones.removeWhere((e) => e.isEmpty);
+    transmisiones.sort();
+    return ['Todos', ...transmisiones];
+  }
+
+  Future<List<String>> _getUniqueCombustibles() async {
+    final snapshot =
+        await FirebaseFirestore.instance.collection('vehiculos').get();
+    final combustibles =
+        snapshot.docs
+            .map((doc) => doc['combustible']?.toString() ?? '')
+            .toSet()
+            .toList();
+    combustibles.removeWhere((e) => e.isEmpty);
+    combustibles.sort();
+    return ['Todos', ...combustibles];
+  }
+
+  Future<List<int>> _getUniquePasajeros() async {
+    final snapshot =
+        await FirebaseFirestore.instance.collection('vehiculos').get();
+    final pasajeros =
+        snapshot.docs
+            .map((doc) => doc['pasajeros'])
+            .where((val) => val is int)
+            .cast<int>()
+            .toSet()
+            .toList();
+    pasajeros.sort();
+    return pasajeros;
+  }
+
   void _showFilterOptions() {
     showModalBottomSheet(
       context: context,
@@ -235,164 +275,182 @@ class _TodosLosVehiculosScreenState extends State<TodosLosVehiculosScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder:
-          (context) => StatefulBuilder(
-            builder:
-                (context, setModalState) => SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          (context) => FutureBuilder<List<dynamic>>(
+            future: Future.wait([
+              _getUniqueTransmisiones(),
+              _getUniqueCombustibles(),
+              _getUniquePasajeros(),
+            ]),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final transmisiones = snapshot.data![0] as List<String>;
+              final combustibles = snapshot.data![1] as List<String>;
+              final pasajeros = snapshot.data![2] as List<int>;
+
+              return StatefulBuilder(
+                builder:
+                    (context, setModalState) => SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Filtros',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    setModalState(() {
+                                      _transmisionFilter = 'Todos';
+                                      _combustibleFilter = 'Todos';
+                                      _pasajerosFilter = null;
+                                    });
+                                    setState(() {
+                                      _transmisionFilter = 'Todos';
+                                      _combustibleFilter = 'Todos';
+                                      _pasajerosFilter = null;
+                                    });
+                                  },
+                                  child: const Text('Limpiar'),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
                             const Text(
-                              'Filtros',
+                              'Transmisión',
                               style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                setModalState(() {
-                                  _transmisionFilter = 'Todos';
-                                  _combustibleFilter = 'Todos';
-                                  _pasajerosFilter = null;
-                                });
-                                setState(() {
-                                  _transmisionFilter = 'Todos';
-                                  _combustibleFilter = 'Todos';
-                                  _pasajerosFilter = null;
-                                });
-                              },
-                              child: const Text('Limpiar'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Transmisión',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          children:
-                              ['Todos', 'Automático', 'Manual']
-                                  .map(
-                                    (t) => FilterChip(
-                                      label: Text(t),
-                                      selected: _transmisionFilter == t,
-                                      onSelected: (v) {
-                                        setModalState(
-                                          () =>
-                                              _transmisionFilter =
-                                                  v ? t : 'Todos',
-                                        );
-                                      },
-                                      selectedColor: Colors.orange.withOpacity(
-                                        0.2,
-                                      ),
-                                      checkmarkColor: Colors.orange,
-                                    ),
-                                  )
-                                  .toList(),
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Combustible',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          children:
-                              ['Todos', 'Gasolina', 'Diésel', 'Eléctrico']
-                                  .map(
-                                    (c) => FilterChip(
-                                      label: Text(c),
-                                      selected: _combustibleFilter == c,
-                                      onSelected: (v) {
-                                        setModalState(
-                                          () =>
-                                              _combustibleFilter =
-                                                  v ? c : 'Todos',
-                                        );
-                                      },
-                                      selectedColor: Colors.orange.withOpacity(
-                                        0.2,
-                                      ),
-                                      checkmarkColor: Colors.orange,
-                                    ),
-                                  )
-                                  .toList(),
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Pasajeros',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          children:
-                              [2, 4, 5, 7]
-                                  .map(
-                                    (p) => FilterChip(
-                                      label: Text('$p'),
-                                      selected: _pasajerosFilter == p,
-                                      onSelected: (v) {
-                                        setModalState(
-                                          () => _pasajerosFilter = v ? p : null,
-                                        );
-                                      },
-                                      selectedColor: Colors.orange.withOpacity(
-                                        0.2,
-                                      ),
-                                      checkmarkColor: Colors.orange,
-                                    ),
-                                  )
-                                  .toList(),
-                        ),
-                        const SizedBox(height: 20),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            onPressed: () {
-                              setState(() {});
-                              Navigator.pop(context);
-                            },
-                            child: const Text(
-                              'Aplicar filtros',
-                              style: TextStyle(
-                                color: Colors.white,
+                                fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                          ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              children:
+                                  transmisiones
+                                      .map(
+                                        (t) => FilterChip(
+                                          label: Text(t),
+                                          selected: _transmisionFilter == t,
+                                          onSelected: (v) {
+                                            setModalState(
+                                              () =>
+                                                  _transmisionFilter =
+                                                      v ? t : 'Todos',
+                                            );
+                                          },
+                                          selectedColor: Colors.orange
+                                              .withOpacity(0.2),
+                                          checkmarkColor: Colors.orange,
+                                        ),
+                                      )
+                                      .toList(),
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Combustible',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              children:
+                                  combustibles
+                                      .map(
+                                        (c) => FilterChip(
+                                          label: Text(c),
+                                          selected: _combustibleFilter == c,
+                                          onSelected: (v) {
+                                            setModalState(
+                                              () =>
+                                                  _combustibleFilter =
+                                                      v ? c : 'Todos',
+                                            );
+                                          },
+                                          selectedColor: Colors.orange
+                                              .withOpacity(0.2),
+                                          checkmarkColor: Colors.orange,
+                                        ),
+                                      )
+                                      .toList(),
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Pasajeros',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              children:
+                                  pasajeros
+                                      .map(
+                                        (p) => FilterChip(
+                                          label: Text('$p'),
+                                          selected: _pasajerosFilter == p,
+                                          onSelected: (v) {
+                                            setModalState(
+                                              () =>
+                                                  _pasajerosFilter =
+                                                      v ? p : null,
+                                            );
+                                          },
+                                          selectedColor: Colors.orange
+                                              .withOpacity(0.2),
+                                          checkmarkColor: Colors.orange,
+                                        ),
+                                      )
+                                      .toList(),
+                            ),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.orange,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                onPressed: () {
+                                  setState(() {});
+                                  Navigator.pop(context);
+                                },
+                                child: const Text(
+                                  'Aplicar filtros',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
+              );
+            },
           ),
     );
   }
@@ -420,7 +478,7 @@ class _TodosLosVehiculosScreenState extends State<TodosLosVehiculosScreen> {
           padding: const EdgeInsets.all(16),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            childAspectRatio: 0.6, // Altura ajustada para evitar overflow
+            childAspectRatio: 0.68, // Altura ajustada para evitar overflow
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
           ),

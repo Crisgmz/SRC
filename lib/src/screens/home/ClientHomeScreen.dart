@@ -328,7 +328,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
             topRight: Radius.circular(20),
           ),
           child: BottomAppBar(
-            notchMargin: 8,
+            notchMargin: 12,
             elevation: 0,
             padding: EdgeInsets.zero,
             height: screenWidth * 0.16,
@@ -624,8 +624,8 @@ class _HomeScreenState extends State<_HomeScreen> {
                           horizontal: screenWidth * 0.04,
                         ),
                         itemCount: 5,
-                        itemBuilder: (_, __) =>
-                            _buildBrandShimmerCard(screenWidth),
+                        itemBuilder:
+                            (_, __) => _buildBrandShimmerCard(screenWidth),
                       ),
                     );
                   }
@@ -1127,11 +1127,12 @@ class _HomeScreenState extends State<_HomeScreen> {
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
             itemCount: 3,
-            itemBuilder: (_, __) => _buildShimmerCard(
-              width: screenWidth * 0.65,
-              height: screenWidth * 0.25,
-              screenWidth: screenWidth,
-            ),
+            itemBuilder:
+                (_, __) => _buildShimmerCard(
+                  width: screenWidth * 0.65,
+                  height: screenWidth * 0.25,
+                  screenWidth: screenWidth,
+                ),
           ),
         ),
         SizedBox(height: screenHeight * 0.02),
@@ -1141,11 +1142,12 @@ class _HomeScreenState extends State<_HomeScreen> {
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.only(left: screenWidth * 0.042),
             itemCount: 3,
-            itemBuilder: (_, __) => _buildShimmerCard(
-              width: screenWidth * 0.45,
-              height: screenWidth * 0.8,
-              screenWidth: screenWidth,
-            ),
+            itemBuilder:
+                (_, __) => _buildShimmerCard(
+                  width: screenWidth * 0.45,
+                  height: screenWidth * 0.8,
+                  screenWidth: screenWidth,
+                ),
           ),
         ),
       ],

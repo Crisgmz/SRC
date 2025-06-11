@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:solutions_rent_car/src/utils/cache_service.dart';
 
 class VehicleScreen extends StatelessWidget {
   final String idVehiculo;
@@ -17,11 +18,10 @@ class VehicleScreen extends StatelessWidget {
         elevation: 0,
       ),
       body: FutureBuilder<DocumentSnapshot>(
-        future:
-            FirebaseFirestore.instance
-                .collection('vehiculos')
-                .doc(idVehiculo)
-                .get(),
+        future: CacheService.getDocument(
+          'vehiculos',
+          idVehiculo,
+        ),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());

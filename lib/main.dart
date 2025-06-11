@@ -42,7 +42,7 @@ class MyApp extends StatelessWidget {
     );
 
     await initializeDateFormatting('es', null);
-    await NotificationService.initialize();
+    await NotificationService().init();
   }
 
   @override

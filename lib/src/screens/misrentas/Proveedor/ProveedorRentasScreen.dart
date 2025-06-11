@@ -1,27 +1,21 @@
-// lib/src/rentas/ClientRentalsScreen.dart
+// lib/src/rentas/ProveedorRentasScreen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'ProveedorRentaDetalleScreen.dart';
+import 'package:solutions_rent_car/src/screens/misrentas/Proveedor/ProveedorRentaDetalleScreen.dart';
 
-class ProveedorRentasScreen extends StatefulWidget {
+class ProveedorRentasScreen extends StatelessWidget {
   const ProveedorRentasScreen({super.key});
 
   @override
-  State<ProveedorRentasScreen> createState() => _ProveedorRentasScreenState();
-}
-
-class _ProveedorRentasScreenState extends State<ProveedorRentasScreen> {
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Mis Rentas'),
+        title: const Text("Rentas de mis Vehículos"),
         centerTitle: true,
-        backgroundColor: const Color(0xFFF8A023),
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream:
@@ -29,20 +23,25 @@ class _ProveedorRentasScreenState extends State<ProveedorRentasScreen> {
                 .collection('rentas')
                 .orderBy('fechaInicio', descending: true)
                 .snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
+        builder: (context, rentasSnapshot) {
+          if (rentasSnapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          final docs = snapshot.data!.docs;
-          if (docs.isEmpty) {
-            return const Center(child: Text('No hay rentas registradas'));
+
+          final rentas = rentasSnapshot.data?.docs ?? [];
+
+          if (rentas.isEmpty) {
+            return const Center(child: Text('No tienes rentas registradas.'));
           }
+
           return ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: docs.length,
+            itemCount: rentas.length,
             itemBuilder: (context, index) {
-              final data = docs[index].data() as Map<String, dynamic>;
-              return _buildRentCard(data, docs[index].id, context);
+              final rentaDoc = rentas[index];
+              final renta = rentaDoc.data() as Map<String, dynamic>;
+
+              return _buildRentaCard(renta, rentaDoc.id, context);
             },
           );
         },
@@ -50,47 +49,75 @@ class _ProveedorRentasScreenState extends State<ProveedorRentasScreen> {
     );
   }
 
-  Widget _buildRentCard(
-    Map<String, dynamic> rentData,
-    String idReserva,
+  Widget _buildRentaCard(
+    Map<String, dynamic> data,
+    String rentaId,
     BuildContext context,
   ) {
-    final fechaInicio = (rentData['fechaInicio'] as Timestamp).toDate();
-    final fechaFin = (rentData['fechaFin'] as Timestamp).toDate();
-    final fechaInicioStr = DateFormat('M/d/yyyy').format(fechaInicio);
-    final fechaFinStr = DateFormat('M/d/yyyy').format(fechaFin);
-    final estado = rentData['estado'] ?? 'Pendiente';
+    final fechaInicio = (data["fechaInicio"] as Timestamp).toDate();
+    final fechaFin = (data["fechaFin"] as Timestamp).toDate();
+    final fechaInicioStr = DateFormat('d/M/yyyy').format(fechaInicio);
+    final fechaFinStr = DateFormat('d/M/yyyy').format(fechaFin);
+    final imagenUrl = data['imagen'] ?? '';
+
+    Color getEstadoColor(String estado) {
+      switch (estado.toLowerCase()) {
+        case 'pre-agendada':
+          return Colors.orange.shade200;
+        case 'confirmada':
+          return Colors.green.shade200;
+        case 'en curso':
+          return Colors.blue.shade200;
+        case 'completada':
+          return Colors.grey.shade200;
+        case 'cancelada':
+          return Colors.red.shade200;
+        default:
+          return Colors.grey.shade200;
+      }
+    }
 
     return GestureDetector(
       onTap: () {
-        Navigator.of(context).push(
+        Navigator.push(
+          context,
           MaterialPageRoute(
             builder:
-                (_) => ClienteRentaDetallesScreen(
+                (_) => ProveedorRentaDetallesScreen(
                   rentaData: data,
                   imagenUrl: imagenUrl,
-                  idRenta: data['id'],
+                  idRenta: rentaId,
                 ),
           ),
         );
       },
       child: Card(
-        margin: const EdgeInsets.only(bottom: 20),
+        margin: const EdgeInsets.only(bottom: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        elevation: 2,
+        elevation: 3,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if ((rentData['imagen'] ?? '').toString().isNotEmpty)
+            if (imagenUrl.isNotEmpty)
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
+                  top: Radius.circular(12),
                 ),
                 child: Image.network(
-                  rentData['imagen'],
-                  height: 200,
+                  imagenUrl,
+                  height: 180,
                   width: double.infinity,
                   fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      height: 180,
+                      color: Colors.grey.shade300,
+                      child: const Icon(
+                        Icons.car_rental,
+                        size: 60,
+                        color: Colors.grey,
+                      ),
+                    );
+                  },
                 ),
               ),
             Padding(
@@ -99,29 +126,128 @@ class _ProveedorRentasScreenState extends State<ProveedorRentasScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    data["vehiculo"] ?? '',
+                    data["vehiculo"] ?? 'Vehículo sin nombre',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text("Desde $fechaInicioStr hasta $fechaFinStr"),
+                  Row(
+                    children: [
+                      const Icon(Icons.person, size: 16, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Text(
+                        "Cliente: ${data["cliente"] ?? 'Sin nombre'}",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  if (data["telefono"] != null)
+                    Row(
+                      children: [
+                        const Icon(Icons.phone, size: 16, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Text(
+                          data["telefono"],
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
                   const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.calendar_today,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        "Del $fechaInicioStr al $fechaFinStr",
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (data["lugarRecogida"] != null)
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.location_on,
+                          size: 16,
+                          color: Colors.green,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            "Recogida: ${data["lugarRecogida"]}",
+                            style: const TextStyle(fontSize: 12),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  const SizedBox(height: 4),
+                  if (data["lugarEntrega"] != null)
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.location_off,
+                          size: 16,
+                          color: Colors.red,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            "Entrega: ${data["lugarEntrega"]}",
+                            style: const TextStyle(fontSize: 12),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        "\$${data["precioTotal"].toStringAsFixed(2)}",
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "\$${data["precioTotal"]?.toStringAsFixed(2) ?? '0.00'}",
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                            ),
+                          ),
+                          Text(
+                            "${data["diasReserva"] ?? 0} días",
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
                       ),
                       Chip(
-                        label: Text(data["estado"] ?? ''),
-                        backgroundColor: Colors.orange.shade200,
-                        labelStyle: const TextStyle(color: Colors.black),
+                        label: Text(
+                          data["estado"] ?? 'Sin estado',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        backgroundColor: getEstadoColor(data["estado"] ?? ''),
+                        side: BorderSide.none,
                       ),
                     ],
                   ),
@@ -132,33 +258,5 @@ class _ProveedorRentasScreenState extends State<ProveedorRentasScreen> {
         ),
       ),
     );
-  }
-
-  Color _statusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'confirmada':
-      case 'activa':
-        return Colors.green[100]!;
-      case 'pendiente':
-        return Colors.orange[100]!;
-      case 'cancelada':
-        return Colors.red[100]!;
-      default:
-        return Colors.grey[200]!;
-    }
-  }
-
-  Color _statusTextColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'confirmada':
-      case 'activa':
-        return Colors.green[700]!;
-      case 'pendiente':
-        return Colors.orange[700]!;
-      case 'cancelada':
-        return Colors.red[700]!;
-      default:
-        return Colors.black54;
-    }
   }
 }

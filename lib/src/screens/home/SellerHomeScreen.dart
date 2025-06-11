@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:solutions_rent_car/src/vehiculos/Proveedor/ConfiguraciónEmpresaScreen.dart';
 import 'package:solutions_rent_car/src/vehiculos/Proveedor/MisVehiculosScreen.dart';
+import 'package:solutions_rent_car/src/screens/misrentas/Proveedor/ProveedorRentasScreen.dart';
+import 'package:solutions_rent_car/src/services/notification_service.dart';
 
 class SellerHomeScreen extends StatefulWidget {
   const SellerHomeScreen({super.key});
@@ -18,14 +20,24 @@ class _SellerHomeScreenState extends State<SellerHomeScreen> {
   final Color iconBorderColor = const Color(0xFF9DB2CE);
 
   @override
+  void initState() {
+    super.initState();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      NotificationService.updateToken(uid);
+      NotificationService.listenForRentas(uid);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final String userId = FirebaseAuth.instance.currentUser!.uid;
 
     final List<Widget> screens = [
       const Center(child: Text('Bienvenido, Vendedor')),
-      const Center(child: Text('Rentas')),
+      const ProveedorRentasScreen(),
       const MisVehiculosScreen(),
-      ConfiguracionEmpresaScreen(userId: userId), // ✅ Corrección aquí
+      ConfiguracionEmpresaScreen(userId: userId),
     ];
 
     return Theme(

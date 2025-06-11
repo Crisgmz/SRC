@@ -48,6 +48,9 @@ dependencies:
   android_intent_plus: ^5.3.0
   cached_network_image: ^3.4.1
   table_calendar: ^3.2.0
+  firebase_messaging: ^15.2.7
+  flutter_local_notifications: ^19.2.1
+  
 
 dev_dependencies:
   flutter_test:

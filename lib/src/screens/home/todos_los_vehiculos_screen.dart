@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:solutions_rent_car/src/vehiculos/ClienteDetalleVehiculoScreen.dart';
 
 class TodosLosVehiculosScreen extends StatefulWidget {
@@ -11,27 +12,16 @@ class TodosLosVehiculosScreen extends StatefulWidget {
 }
 
 class _TodosLosVehiculosScreenState extends State<TodosLosVehiculosScreen> {
-  String? filtroTransmision;
-  String? filtroCombustible;
-  int? filtroPasajeros;
+  String _transmisionFilter = 'Todos';
+  String _combustibleFilter = 'Todos';
+  int? _pasajerosFilter;
+  String _sortBy = 'precioPorDia';
+  bool _sortDescending = false;
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final crossAxisCount = screenWidth > 600 ? 3 : 2;
-
-    Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection(
-      'vehiculos',
-    );
-    if (filtroTransmision != null) {
-      query = query.where('transmision', isEqualTo: filtroTransmision);
-    }
-    if (filtroCombustible != null) {
-      query = query.where('combustible', isEqualTo: filtroCombustible);
-    }
-    if (filtroPasajeros != null) {
-      query = query.where('pasajeros', isEqualTo: filtroPasajeros);
-    }
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -44,198 +34,492 @@ class _TodosLosVehiculosScreenState extends State<TodosLosVehiculosScreen> {
       ),
       body: Column(
         children: [
-          // Sección de filtros
+          // Sección de filtros estilo Mis Rentas
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _buildFilterDropdown(
-                    hint: 'Transmisión',
-                    value: filtroTransmision,
-                    items: ['Automático', 'Manual'],
-                    onChanged: (v) => setState(() => filtroTransmision = v),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                GestureDetector(
+                  onTap: _showSortOptions,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey[300]!),
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.swap_vert,
+                          size: 20,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Organizar',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.keyboard_arrow_down,
+                          size: 20,
+                          color: Colors.grey[600],
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(width: 12),
-                  _buildFilterDropdown(
-                    hint: 'Combustible',
-                    value: filtroCombustible,
-                    items: ['Gasolina', 'Diésel', 'Eléctrico'],
-                    onChanged: (v) => setState(() => filtroCombustible = v),
+                ),
+                GestureDetector(
+                  onTap: _showFilterOptions,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _hasActiveFilters() ? Colors.orange : Colors.white,
+                      border: Border.all(
+                        color:
+                            _hasActiveFilters()
+                                ? Colors.orange
+                                : Colors.grey[300]!,
+                      ),
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.tune,
+                          size: 20,
+                          color:
+                              _hasActiveFilters()
+                                  ? Colors.white
+                                  : Colors.grey[600],
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Filtros',
+                          style: TextStyle(
+                            color:
+                                _hasActiveFilters()
+                                    ? Colors.white
+                                    : Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        if (_hasActiveFilters()) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              _getActiveFiltersCount().toString(),
+                              style: const TextStyle(
+                                color: Colors.orange,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                  const SizedBox(width: 12),
-                  _buildPassengerDropdown(),
-                  const SizedBox(width: 12),
-                  _buildClearFiltersButton(),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
           // Grid de vehículos
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: query.snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Error al cargar vehículos',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        ElevatedButton(
-                          onPressed: () => setState(() {}),
-                          child: const Text('Reintentar'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.directions_car_outlined,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No se encontraron vehículos',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextButton(
-                          onPressed: _clearAllFilters,
-                          child: const Text('Limpiar filtros'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                final docs = snapshot.data!.docs;
-
-                return GridView.builder(
-                  padding: const EdgeInsets.all(16),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: crossAxisCount,
-                    childAspectRatio:
-                        0.6, // Altura ajustada para evitar overflow
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                  ),
-                  itemCount: docs.length,
-                  itemBuilder: (context, index) {
-                    final data = docs[index].data() as Map<String, dynamic>;
-                    final idVehiculo = docs[index].id;
-
-                    return _VehicleCard(
-                      data: data,
-                      idVehiculo: idVehiculo,
-                      onTap: () => _navigateToDetails(idVehiculo),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
+          Expanded(child: _buildVehicleStream(crossAxisCount)),
         ],
       ),
     );
   }
 
-  Widget _buildFilterDropdown({
-    required String hint,
-    required String? value,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(8),
+  Stream<QuerySnapshot<Map<String, dynamic>>> _buildQuery() {
+    Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection(
+      'vehiculos',
+    );
+
+    if (_transmisionFilter != 'Todos') {
+      query = query.where('transmision', isEqualTo: _transmisionFilter);
+    }
+    if (_combustibleFilter != 'Todos') {
+      query = query.where('combustible', isEqualTo: _combustibleFilter);
+    }
+    if (_pasajerosFilter != null) {
+      query = query.where('pasajeros', isEqualTo: _pasajerosFilter);
+    }
+
+    return query.orderBy(_sortBy, descending: _sortDescending).snapshots();
+  }
+
+  bool _hasActiveFilters() {
+    return _transmisionFilter != 'Todos' ||
+        _combustibleFilter != 'Todos' ||
+        _pasajerosFilter != null;
+  }
+
+  int _getActiveFiltersCount() {
+    int count = 0;
+    if (_transmisionFilter != 'Todos') count++;
+    if (_combustibleFilter != 'Todos') count++;
+    if (_pasajerosFilter != null) count++;
+    return count;
+  }
+
+  void _showSortOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: DropdownButton<String>(
-        hint: Text(hint),
-        value: value,
-        underline: const SizedBox(),
-        items:
-            items
-                .map((item) => DropdownMenuItem(value: item, child: Text(item)))
-                .toList(),
-        onChanged: onChanged,
-      ),
+      builder:
+          (context) => SafeArea(
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Organizar por',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  ListTile(
+                    title: const Text('Precio mayor'),
+                    onTap: () {
+                      setState(() {
+                        _sortBy = 'precioPorDia';
+                        _sortDescending = true;
+                      });
+                      Navigator.pop(context);
+                    },
+                  ),
+                  ListTile(
+                    title: const Text('Precio menor'),
+                    onTap: () {
+                      setState(() {
+                        _sortBy = 'precioPorDia';
+                        _sortDescending = false;
+                      });
+                      Navigator.pop(context);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
     );
   }
 
-  Widget _buildPassengerDropdown() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(8),
+  Future<List<String>> _getUniqueTransmisiones() async {
+    final snapshot =
+        await FirebaseFirestore.instance.collection('vehiculos').get();
+    final transmisiones =
+        snapshot.docs
+            .map((doc) => doc['transmision']?.toString() ?? '')
+            .toSet()
+            .toList();
+    transmisiones.removeWhere((e) => e.isEmpty);
+    transmisiones.sort();
+    return ['Todos', ...transmisiones];
+  }
+
+  Future<List<String>> _getUniqueCombustibles() async {
+    final snapshot =
+        await FirebaseFirestore.instance.collection('vehiculos').get();
+    final combustibles =
+        snapshot.docs
+            .map((doc) => doc['combustible']?.toString() ?? '')
+            .toSet()
+            .toList();
+    combustibles.removeWhere((e) => e.isEmpty);
+    combustibles.sort();
+    return ['Todos', ...combustibles];
+  }
+
+  Future<List<int>> _getUniquePasajeros() async {
+    final snapshot =
+        await FirebaseFirestore.instance.collection('vehiculos').get();
+    final pasajeros =
+        snapshot.docs
+            .map((doc) => doc['pasajeros'])
+            .whereType<int>()
+            .cast<int>()
+            .toSet()
+            .toList();
+    pasajeros.sort();
+    return pasajeros;
+  }
+
+  void _showFilterOptions() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: DropdownButton<int>(
-        hint: const Text('Pasajeros'),
-        value: filtroPasajeros,
-        underline: const SizedBox(),
-        items:
-            [2, 4, 5, 7]
-                .map((p) => DropdownMenuItem(value: p, child: Text('$p')))
-                .toList(),
-        onChanged: (v) => setState(() => filtroPasajeros = v),
-      ),
+      builder:
+          (context) => FutureBuilder<List<dynamic>>(
+            future: Future.wait([
+              _getUniqueTransmisiones(),
+              _getUniqueCombustibles(),
+              _getUniquePasajeros(),
+            ]),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final transmisiones = snapshot.data![0] as List<String>;
+              final combustibles = snapshot.data![1] as List<String>;
+              final pasajeros = snapshot.data![2] as List<int>;
+
+              return StatefulBuilder(
+                builder:
+                    (context, setModalState) => SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Filtros',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    setModalState(() {
+                                      _transmisionFilter = 'Todos';
+                                      _combustibleFilter = 'Todos';
+                                      _pasajerosFilter = null;
+                                    });
+                                    setState(() {
+                                      _transmisionFilter = 'Todos';
+                                      _combustibleFilter = 'Todos';
+                                      _pasajerosFilter = null;
+                                    });
+                                  },
+                                  child: const Text('Limpiar'),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Transmisión',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              children:
+                                  transmisiones
+                                      .map(
+                                        (t) => FilterChip(
+                                          label: Text(t),
+                                          selected: _transmisionFilter == t,
+                                          onSelected: (v) {
+                                            setModalState(
+                                              () =>
+                                                  _transmisionFilter =
+                                                      v ? t : 'Todos',
+                                            );
+                                          },
+                                          selectedColor: Colors.orange
+                                              .withOpacity(0.2),
+                                          checkmarkColor: Colors.orange,
+                                        ),
+                                      )
+                                      .toList(),
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Combustible',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              children:
+                                  combustibles
+                                      .map(
+                                        (c) => FilterChip(
+                                          label: Text(c),
+                                          selected: _combustibleFilter == c,
+                                          onSelected: (v) {
+                                            setModalState(
+                                              () =>
+                                                  _combustibleFilter =
+                                                      v ? c : 'Todos',
+                                            );
+                                          },
+                                          selectedColor: Colors.orange
+                                              .withOpacity(0.2),
+                                          checkmarkColor: Colors.orange,
+                                        ),
+                                      )
+                                      .toList(),
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Pasajeros',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              children:
+                                  pasajeros
+                                      .map(
+                                        (p) => FilterChip(
+                                          label: Text('$p'),
+                                          selected: _pasajerosFilter == p,
+                                          onSelected: (v) {
+                                            setModalState(
+                                              () =>
+                                                  _pasajerosFilter =
+                                                      v ? p : null,
+                                            );
+                                          },
+                                          selectedColor: Colors.orange
+                                              .withOpacity(0.2),
+                                          checkmarkColor: Colors.orange,
+                                        ),
+                                      )
+                                      .toList(),
+                            ),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.orange,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                onPressed: () {
+                                  setState(() {});
+                                  Navigator.pop(context);
+                                },
+                                child: const Text(
+                                  'Aplicar filtros',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+              );
+            },
+          ),
     );
   }
 
-  Widget _buildClearFiltersButton() {
-    final hasFilters =
-        filtroTransmision != null ||
-        filtroCombustible != null ||
-        filtroPasajeros != null;
+  StreamBuilder<QuerySnapshot<Map<String, dynamic>>> _buildVehicleStream(
+    int crossAxisCount,
+  ) {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: _buildQuery(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildShimmerGrid(crossAxisCount);
+        }
 
-    return TextButton.icon(
-      onPressed: hasFilters ? _clearAllFilters : null,
-      icon: const Icon(Icons.clear_all, size: 18),
-      label: const Text('Limpiar'),
-      style: TextButton.styleFrom(
-        foregroundColor: hasFilters ? Colors.orange : Colors.grey,
-      ),
+        if (snapshot.hasError) {
+          return const Center(child: Text('Error al cargar vehículos'));
+        }
+
+        final docs = snapshot.data?.docs ?? [];
+        if (docs.isEmpty) {
+          return const Center(child: Text('No se encontraron vehículos'));
+        }
+
+        return GridView.builder(
+          padding: const EdgeInsets.all(16),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            childAspectRatio: 0.68, // Altura ajustada para evitar overflow
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+          ),
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final data = docs[index].data();
+            final idVehiculo = docs[index].id;
+
+            return _VehicleCard(
+              data: data,
+              idVehiculo: idVehiculo,
+              onTap: () => _navigateToDetails(idVehiculo),
+            );
+          },
+        );
+      },
     );
   }
 
-  void _clearAllFilters() {
-    setState(() {
-      filtroTransmision = null;
-      filtroCombustible = null;
-      filtroPasajeros = null;
-    });
+  Widget _buildShimmerGrid(int crossAxisCount) {
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        childAspectRatio: 0.68,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: crossAxisCount * 2,
+      itemBuilder:
+          (_, __) => Shimmer.fromColors(
+            baseColor: Colors.grey[300]!,
+            highlightColor: Colors.grey[100]!,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+    );
   }
 
   void _navigateToDetails(String idVehiculo) {
@@ -365,7 +649,7 @@ class _VehicleCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: screenWidth * 0.01),
+                    //         SizedBox(height: screenWidth * 0.01),
                     // Detalles del vehículo
                     Column(
                       children: [
@@ -445,23 +729,6 @@ class _VehicleCard extends StatelessWidget {
                             ),
                           ),
                         ],
-                      ),
-                    ),
-                    // Botón
-                    SizedBox(
-                      height: screenWidth * 0.08,
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFF9A825),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          textStyle: TextStyle(fontSize: screenWidth * 0.033),
-                        ),
-                        onPressed: onTap,
-                        child: const Text('Rentar'),
                       ),
                     ),
                   ],

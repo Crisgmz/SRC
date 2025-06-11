@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:solutions_rent_car/src/utils/cache_service.dart';
 import 'package:shimmer/shimmer.dart';
 
 class AgregarNuevoVehiculoScreen extends StatefulWidget {
@@ -61,7 +62,7 @@ class _AgregarNuevoVehiculoScreenState
 
   Future<void> cargarMarcasYModelos() async {
     final snapshot =
-        await FirebaseFirestore.instance.collection('marcas').get();
+        await CacheService.getCollection('marcas');
 
     if (snapshot.docs.isEmpty) {
       setState(() => _isLoading = false);

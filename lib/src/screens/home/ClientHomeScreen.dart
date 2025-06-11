@@ -328,7 +328,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
             topRight: Radius.circular(20),
           ),
           child: BottomAppBar(
-            notchMargin: 8,
+            notchMargin: 12,
             elevation: 0,
             padding: EdgeInsets.zero,
             height: screenWidth * 0.16,
@@ -439,11 +439,25 @@ class _HomeScreenState extends State<_HomeScreen> {
   // Streams con caché
   Stream<QuerySnapshot>? _recentViewsStream;
   Stream<QuerySnapshot>? _featuredVehiclesStream;
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
     _initializeStreams();
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    await Future.wait([
+      widget.cacheManager.getFilteredBrandDocs(),
+      widget.cacheManager.getFeaturedVehicles(),
+    ]);
+    if (mounted) {
+      setState(() {
+        _loading = false;
+      });
+    }
   }
 
   void _initializeStreams() {
@@ -469,6 +483,10 @@ class _HomeScreenState extends State<_HomeScreen> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+
+    if (_loading) {
+      return _buildHomeShimmer(screenWidth, screenHeight);
+    }
 
     return Column(
       children: [
@@ -588,6 +606,7 @@ class _HomeScreenState extends State<_HomeScreen> {
         Expanded(
           child: ListView(
             padding: EdgeInsets.zero,
+            physics: const BouncingScrollPhysics(),
             children: [
               SizedBox(height: screenHeight * 0.015),
 
@@ -600,12 +619,13 @@ class _HomeScreenState extends State<_HomeScreen> {
                       height: screenWidth * 0.25,
                       child: ListView.builder(
                         scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
                         padding: EdgeInsets.symmetric(
                           horizontal: screenWidth * 0.04,
                         ),
                         itemCount: 5,
-                        itemBuilder: (_, __) =>
-                            _buildBrandShimmerCard(screenWidth),
+                        itemBuilder:
+                            (_, __) => _buildBrandShimmerCard(screenWidth),
                       ),
                     );
                   }
@@ -616,6 +636,7 @@ class _HomeScreenState extends State<_HomeScreen> {
                     height: screenWidth * 0.25,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
                       padding: EdgeInsets.symmetric(
                         horizontal: screenWidth * 0.04,
                       ),
@@ -664,6 +685,7 @@ class _HomeScreenState extends State<_HomeScreen> {
                         height: screenHeight * 0.42,
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
                           padding: EdgeInsets.symmetric(
                             horizontal: screenWidth * 0.04,
                           ),
@@ -684,6 +706,7 @@ class _HomeScreenState extends State<_HomeScreen> {
                       height: screenWidth * 0.34,
                       child: ListView.builder(
                         scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
                         padding: EdgeInsets.only(
                           left: screenWidth * 0.04,
                           right: screenWidth * 0.04,
@@ -819,6 +842,7 @@ class _HomeScreenState extends State<_HomeScreen> {
                       height: screenWidth * 0.85,
                       child: ListView.builder(
                         scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
                         padding: EdgeInsets.only(left: screenWidth * 0.042),
                         itemCount: 3,
                         itemBuilder:
@@ -839,6 +863,7 @@ class _HomeScreenState extends State<_HomeScreen> {
                         height: screenWidth * 0.75,
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
                           padding: EdgeInsets.only(right: screenWidth * 0.032),
                           itemCount: docs.length,
                           itemBuilder: (context, index) {
@@ -1026,6 +1051,106 @@ class _HomeScreenState extends State<_HomeScreen> {
           borderRadius: BorderRadius.circular(12),
         ),
       ),
+    );
+  }
+
+  Widget _buildHomeShimmer(double screenWidth, double screenHeight) {
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.fromLTRB(
+            screenWidth * 0.06,
+            MediaQuery.of(context).padding.top + screenHeight * 0.02,
+            screenWidth * 0.06,
+            screenHeight * 0.035,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.orange,
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(16),
+              bottomRight: Radius.circular(16),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Shimmer.fromColors(
+                baseColor: Colors.grey[300]!,
+                highlightColor: Colors.grey[100]!,
+                child: Container(
+                  height: screenWidth * 0.07,
+                  width: screenWidth * 0.4,
+                  color: Colors.white,
+                ),
+              ),
+              SizedBox(height: screenHeight * 0.01),
+              Shimmer.fromColors(
+                baseColor: Colors.grey[300]!,
+                highlightColor: Colors.grey[100]!,
+                child: Container(
+                  height: screenWidth * 0.045,
+                  width: screenWidth * 0.6,
+                  color: Colors.white,
+                ),
+              ),
+              SizedBox(height: screenHeight * 0.025),
+              Shimmer.fromColors(
+                baseColor: Colors.grey[300]!,
+                highlightColor: Colors.grey[100]!,
+                child: Container(
+                  height: screenHeight * 0.06,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: screenHeight * 0.015),
+        SizedBox(
+          height: screenWidth * 0.25,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
+            itemCount: 5,
+            itemBuilder: (_, __) => _buildBrandShimmerCard(screenWidth),
+          ),
+        ),
+        SizedBox(height: screenHeight * 0.02),
+        SizedBox(
+          height: screenWidth * 0.34,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
+            itemCount: 3,
+            itemBuilder:
+                (_, __) => _buildShimmerCard(
+                  width: screenWidth * 0.65,
+                  height: screenWidth * 0.25,
+                  screenWidth: screenWidth,
+                ),
+          ),
+        ),
+        SizedBox(height: screenHeight * 0.02),
+        SizedBox(
+          height: screenWidth * 0.75,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: EdgeInsets.only(left: screenWidth * 0.042),
+            itemCount: 3,
+            itemBuilder:
+                (_, __) => _buildShimmerCard(
+                  width: screenWidth * 0.45,
+                  height: screenWidth * 0.8,
+                  screenWidth: screenWidth,
+                ),
+          ),
+        ),
+      ],
     );
   }
 

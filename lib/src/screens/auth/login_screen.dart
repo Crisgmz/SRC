@@ -1,9 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:solutions_rent_car/src/utils/cache_service.dart';
 import 'package:solutions_rent_car/src/screens/home/ClientHomeScreen.dart';
 import 'package:solutions_rent_car/src/screens/home/SellerHomeScreen.dart';
 import 'package:flutter/foundation.dart'; // asegúrate de tener esto
+import 'package:solutions_rent_car/src/services/notification_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -510,11 +511,10 @@ class _LoginScreenState extends State<LoginScreen> {
         }
 
         // Obtener el rol del usuario desde Firestore
-        final documentoUsuario =
-            await FirebaseFirestore.instance
-                .collection('usuarios')
-                .doc(userId)
-                .get();
+        final documentoUsuario = await CacheService.getDocument(
+          'usuarios',
+          userId,
+        );
 
         if (!documentoUsuario.exists) {
           throw Exception('El usuario no existe en la base de datos');
@@ -532,6 +532,7 @@ class _LoginScreenState extends State<LoginScreen> {
             MaterialPageRoute(builder: (context) => const ClientHomeScreen()),
           );
         } else if (rol?.toLowerCase() == 'vendedor') {
+          await NotificationService().updateToken(userId);
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const SellerHomeScreen()),

@@ -365,7 +365,7 @@ class _VehicleCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: screenWidth * 0.01),
+                    //         SizedBox(height: screenWidth * 0.01),
                     // Detalles del vehículo
                     Column(
                       children: [
@@ -445,23 +445,6 @@ class _VehicleCard extends StatelessWidget {
                             ),
                           ),
                         ],
-                      ),
-                    ),
-                    // Botón
-                    SizedBox(
-                      height: screenWidth * 0.08,
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFF9A825),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          textStyle: TextStyle(fontSize: screenWidth * 0.033),
-                        ),
-                        onPressed: onTap,
-                        child: const Text('Rentar'),
                       ),
                     ),
                   ],

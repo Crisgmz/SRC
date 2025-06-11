@@ -8,6 +8,7 @@ import 'package:solutions_rent_car/firebase_options.dart';
 import 'package:solutions_rent_car/src/screens/auth/register_screen.dart';
 import 'package:solutions_rent_car/src/screens/auth/login_screen.dart';
 import 'package:solutions_rent_car/src/screens/home/ClientHomeScreen.dart'; // Ajusta la ruta si es diferente
+import 'package:solutions_rent_car/src/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,6 +42,7 @@ class MyApp extends StatelessWidget {
     );
 
     await initializeDateFormatting('es', null);
+    await NotificationService().init();
   }
 
   @override

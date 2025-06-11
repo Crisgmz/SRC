@@ -145,7 +145,7 @@ class _TodosLosVehiculosScreenState extends State<TodosLosVehiculosScreen> {
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: crossAxisCount,
                     childAspectRatio:
-                        0.6, // Altura ajustada para evitar overflow
+                        0.68, // Altura ajustada para evitar overflow
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
                   ),

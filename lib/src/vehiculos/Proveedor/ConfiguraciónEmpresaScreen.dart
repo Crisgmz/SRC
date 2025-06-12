@@ -1,10 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:solutions_rent_car/src/screens/auth/login_screen.dart';
 
 class ConfiguracionEmpresaScreen extends StatelessWidget {
   final String userId;
 
   const ConfiguracionEmpresaScreen({super.key, required this.userId});
+
+  Future<void> _confirmarCerrarSesion(BuildContext context) async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Cerrar sesión'),
+            content: const Text('¿Estás seguro que deseas cerrar sesión?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Confirmar'),
+              ),
+            ],
+          ),
+    );
+
+    if (shouldLogout == true) {
+      await FirebaseAuth.instance.signOut();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,9 +114,7 @@ class ConfiguracionEmpresaScreen extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: TextButton.icon(
-                  onPressed: () {
-                    // Aquí pones tu lógica de logout
-                  },
+                  onPressed: () => _confirmarCerrarSesion(context),
                   icon: const Icon(Icons.logout, color: Colors.deepPurple),
                   label: const Text(
                     "Cerrar sesión",

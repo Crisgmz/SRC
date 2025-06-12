@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:solutions_rent_car/src/screens/auth/login_screen.dart';
 
 class PantallaPerfilCliente extends StatefulWidget {
   const PantallaPerfilCliente({super.key});
@@ -33,6 +34,34 @@ class _PantallaPerfilClienteState extends State<PantallaPerfilCliente> {
     });
   }
 
+  Future<void> _confirmarCerrarSesion() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Cerrar sesión'),
+            content: const Text('¿Estás seguro que deseas cerrar sesión?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Confirmar'),
+              ),
+            ],
+          ),
+    );
+    if (shouldLogout == true) {
+      await FirebaseAuth.instance.signOut();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -43,10 +72,7 @@ class _PantallaPerfilClienteState extends State<PantallaPerfilCliente> {
         elevation: 0,
         title: const Text(
           'Perfil',
-          style: TextStyle(
-            color: Color.fromARGB(255, 255, 255, 255),
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
         centerTitle: true,
       ),
@@ -63,7 +89,7 @@ class _PantallaPerfilClienteState extends State<PantallaPerfilCliente> {
                         CircleAvatar(
                           radius: 50,
                           backgroundImage: NetworkImage(
-                            "https://i.pravatar.cc/300", // Reemplazar por userData['fotoUrl'] si lo tienes
+                            userData?['fotoUrl'] ?? "https://i.pravatar.cc/300",
                           ),
                         ),
                         Container(
@@ -101,13 +127,13 @@ class _PantallaPerfilClienteState extends State<PantallaPerfilCliente> {
                       children: [
                         _opcionPerfil(Icons.person, "Mi perfil"),
                         _opcionPerfil(Icons.receipt_long, "Mis reservaciones"),
-
                         _opcionPerfil(Icons.settings, "Configuración"),
                         _opcionPerfil(Icons.help_outline, "Centro de ayuda"),
                         _opcionPerfil(
                           Icons.privacy_tip,
                           "Política de privacidad",
                         ),
+                        const SizedBox(height: 16),
                         _infoAdicional("Teléfono", userData?['phone']),
                         _infoAdicional(
                           "Fecha de registro",
@@ -116,6 +142,21 @@ class _PantallaPerfilClienteState extends State<PantallaPerfilCliente> {
                                 (userData?['createdAt'] as Timestamp).toDate(),
                               )
                               : 'Desconocido',
+                        ),
+                        const Divider(height: 32),
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 4,
+                          ),
+                          leading: const Icon(Icons.logout, color: Colors.red),
+                          title: const Text(
+                            "Cerrar sesión",
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          onTap: _confirmarCerrarSesion,
                         ),
                       ],
                     ),

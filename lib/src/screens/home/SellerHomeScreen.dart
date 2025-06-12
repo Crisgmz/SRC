@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:solutions_rent_car/src/screens/misrentas/Proveedor/ProveedorRentasScreen.dart';
 import 'package:solutions_rent_car/src/vehiculos/Proveedor/ConfiguraciónEmpresaScreen.dart';
 import 'package:solutions_rent_car/src/vehiculos/Proveedor/MisVehiculosScreen.dart';
 
@@ -23,7 +24,7 @@ class _SellerHomeScreenState extends State<SellerHomeScreen> {
 
     final List<Widget> screens = [
       const Center(child: Text('Bienvenido, Vendedor')),
-      const Center(child: Text('Rentas')),
+      const ProveedorRentasScreen(),
       const MisVehiculosScreen(),
       ConfiguracionEmpresaScreen(userId: userId), // ✅ Corrección aquí
     ];
@@ -31,9 +32,7 @@ class _SellerHomeScreenState extends State<SellerHomeScreen> {
     return Theme(
       data: Theme.of(context).copyWith(
         navigationBarTheme: NavigationBarThemeData(
-          labelTextStyle: WidgetStateProperty.resolveWith<TextStyle?>((
-            states,
-          ) {
+          labelTextStyle: WidgetStateProperty.resolveWith<TextStyle?>((states) {
             final isSelected = states.contains(WidgetState.selected);
             return TextStyle(
               fontSize: 12,

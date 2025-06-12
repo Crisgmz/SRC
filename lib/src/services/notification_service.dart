@@ -23,6 +23,14 @@ class NotificationService {
     FirebaseMessaging.onMessage.listen(_onMessage);
   }
 
+  Future<void> subscribeToTopic(String topic) async {
+    await _messaging.subscribeToTopic(topic);
+  }
+
+  Future<void> unsubscribeFromTopic(String topic) async {
+    await _messaging.unsubscribeFromTopic(topic);
+  }
+
   Future<void> _onMessage(RemoteMessage message) async {
     await _showNotification(message);
   }

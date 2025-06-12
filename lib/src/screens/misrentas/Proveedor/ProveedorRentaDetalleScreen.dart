@@ -20,8 +20,9 @@ class ProveedorRentaDetallesScreen extends StatelessWidget {
     final fechaInicio = (rentaData['fechaInicio'] as Timestamp).toDate();
     final fechaFin = (rentaData['fechaFin'] as Timestamp).toDate();
     final estado = (rentaData['estado'] ?? '').toString().toLowerCase();
-    final puedeAccionar =
-        estado == 'pendiente' || estado == 'cancelacion_pendiente';
+    final puedeAccionar = estado == 'pendiente' ||
+        estado == 'cancelacion_pendiente' ||
+        estado == 'pre-agendada';
 
     return Scaffold(
       backgroundColor: Colors.grey[50],

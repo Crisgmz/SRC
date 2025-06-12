@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:solutions_rent_car/src/screens/home/ClientHomeScreen.dart';
+import 'package:solutions_rent_car/src/services/fcm_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:math';
 
@@ -42,6 +43,7 @@ class _ConfirmacionReservaScreenState extends State<ConfirmacionReservaScreen> {
   bool isLoading = true;
   Map<String, dynamic>? vehiculoData;
   String? errorMessage;
+  bool _notificationSent = false;
 
   @override
   void initState() {
@@ -795,6 +797,11 @@ class _ConfirmacionReservaScreenState extends State<ConfirmacionReservaScreen> {
       };
 
       await FirebaseFirestore.instance.collection('rentas').add(reserva);
+
+      if (!_notificationSent) {
+        _notificationSent = true;
+        await FcmService.sendNewRentalNotification(reserva);
+      }
 
       // También actualizar el contador de reservas del vehículo
       final docRef =

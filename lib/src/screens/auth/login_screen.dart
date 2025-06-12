@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:solutions_rent_car/src/screens/home/ClientHomeScreen.dart';
 import 'package:solutions_rent_car/src/screens/home/SellerHomeScreen.dart';
+import 'package:solutions_rent_car/src/services/notification_service.dart';
 import 'package:flutter/foundation.dart'; // asegúrate de tener esto
 
 class LoginScreen extends StatefulWidget {
@@ -532,6 +533,7 @@ class _LoginScreenState extends State<LoginScreen> {
             MaterialPageRoute(builder: (context) => const ClientHomeScreen()),
           );
         } else if (rol?.toLowerCase() == 'vendedor') {
+          await NotificationService().subscribeToTopic('providers');
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const SellerHomeScreen()),

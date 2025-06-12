@@ -1,1 +1,38 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"solutionsrentcar-ecc4f","appId":"1:1054716874189:android:610031771244b1f6ba4884","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"solutionsrentcar-ecc4f","configurations":{"android":"1:1054716874189:android:610031771244b1f6ba4884","ios":"1:1054716874189:ios:67ce308ef5459e16ba4884","macos":"1:1054716874189:ios:67ce308ef5459e16ba4884","web":"1:1054716874189:web:6ad043d98c5bf344ba4884","windows":"1:1054716874189:web:065cb7366a6411dcba4884"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "solutionsrentcar-ecc4f",
+          "appId": "1:1054716874189:android:610031771244b1f6ba4884",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "solutionsrentcar-ecc4f",
+          "configurations": {
+            "android": "1:1054716874189:android:610031771244b1f6ba4884",
+            "ios": "1:1054716874189:ios:67ce308ef5459e16ba4884",
+            "macos": "1:1054716874189:ios:67ce308ef5459e16ba4884",
+            "web": "1:1054716874189:web:6ad043d98c5bf344ba4884",
+            "windows": "1:1054716874189:web:065cb7366a6411dcba4884"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ]
+    }
+  ]
+}

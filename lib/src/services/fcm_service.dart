@@ -4,36 +4,35 @@ import 'package:http/http.dart' as http;
 class FcmService {
   FcmService._();
 
-  static const String _serverKey = String.fromEnvironment('FCM_SERVER_KEY');
-  static const String _fcmUrl = 'https://fcm.googleapis.com/fcm/send';
+  // URL de tu Function, la pasamos por dart-define para no hardcodear en el código
+  static const String _functionUrl = String.fromEnvironment(
+    'FCM_FUNCTION_URL',
+    defaultValue: 'https://sendnewrentalnotification-cqkyaucrrq-uc.a.run.app',
+  );
 
+  /// Envía la petición de notificación a la Cloud Function
   static Future<void> sendNewRentalNotification(
-      Map<String, dynamic> renta) async {
-    if (_serverKey.isEmpty) return;
-
-    final message = {
-      'to': '/topics/providers',
-      'notification': {
-        'title': 'Nueva renta',
-        'body': 'Se ha creado una renta de ${renta['vehiculo'] ?? ''}',
-      },
-      'data': {
-        'idReserva': renta['idReserva'] ?? '',
-      }
-    };
+    Map<String, dynamic> renta,
+  ) async {
+    final uri = Uri.parse(_functionUrl);
 
     try {
-      await http.post(
-        Uri.parse(_fcmUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'key=$_serverKey',
-        },
-        body: jsonEncode(message),
+      final resp = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'vehiculo': renta['vehiculo'] ?? '',
+          'idReserva': renta['idReserva'] ?? '',
+        }),
       );
-    } catch (_) {
-      // Silenciar errores en el envío de notificaciones
+
+      if (resp.statusCode >= 400) {
+        // Opcional: loguear el error o lanzar excepción
+        print('Error al enviar notificación: ${resp.statusCode} ${resp.body}');
+      }
+    } catch (e) {
+      // Silenciar o manejar errores de red/API
+      print('Fallo al llamar Function: $e');
     }
   }
 }
-
